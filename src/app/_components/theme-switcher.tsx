@@ -9,7 +9,7 @@ declare global {
 
 type ColorSchemePreference = "system" | "dark" | "light";
 
-const STORAGE_KEY = "nextjs-blog-starter-theme";
+const STORAGE_KEY = "personal-blog-theme";
 const modes: ColorSchemePreference[] = ["system", "dark", "light"];
 
 /** to reuse updateDOM function defined inside injected script */
@@ -38,13 +38,13 @@ export const NoFOUCScript = (storageKey: string) => {
   /** function to add remove dark class */
   window.updateDOM = () => {
     const restoreTransitions = modifyTransition();
-    const mode = localStorage.getItem(storageKey) ?? SYSTEM;
+    const mode = localStorage.getItem(storageKey) ?? LIGHT;
     const systemMode = media.matches ? DARK : LIGHT;
     const resolvedMode = mode === SYSTEM ? systemMode : mode;
     const classList = document.documentElement.classList;
     if (resolvedMode === DARK) classList.add(DARK);
     else classList.remove(DARK);
-    document.documentElement.setAttribute("data-mode", mode);
+    document.documentElement.setAttribute("data-mode", mode || LIGHT);
     restoreTransitions();
   };
   window.updateDOM();
@@ -61,7 +61,7 @@ const Switch = () => {
     () =>
       ((typeof localStorage !== "undefined" &&
         localStorage.getItem(STORAGE_KEY)) ??
-        "system") as ColorSchemePreference,
+        "light") as ColorSchemePreference,
   );
 
   useEffect(() => {

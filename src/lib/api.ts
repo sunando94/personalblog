@@ -2,6 +2,7 @@ import { Post } from "@/interfaces/post";
 import fs from "fs";
 import matter from "gray-matter";
 import { join } from "path";
+import { getAuthorWithDefaults } from "./author";
 
 const postsDirectory = join(process.cwd(), "_posts");
 
@@ -15,7 +16,16 @@ export function getPostBySlug(slug: string) {
   const fileContents = fs.readFileSync(fullPath, "utf8");
   const { data, content } = matter(fileContents);
 
-  return { ...data, slug: realSlug, content } as Post;
+  const post = { ...data, slug: realSlug, content } as Post;
+  
+  // Apply default author if author is not fully specified
+  if (post.author) {
+    post.author = getAuthorWithDefaults(post.author);
+  } else {
+    post.author = getAuthorWithDefaults();
+  }
+
+  return post;
 }
 
 export function getAllPosts(): Post[] {
