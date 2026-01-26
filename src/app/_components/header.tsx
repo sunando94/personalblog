@@ -2,34 +2,11 @@
 
 import Link from "next/link";
 import { DEFAULT_AUTHOR } from "@/lib/author";
-import { useState, useEffect } from "react";
+import { Logo } from "./logo";
 
 const Header = () => {
-  const [mounted, setMounted] = useState(false);
-  const [title, setTitle] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    setMounted(true);
-    fetchDynamicTitle();
-  }, []);
-
-  const fetchDynamicTitle = async () => {
-    try {
-      const response = await fetch("/api/generate-title?type=header");
-      if (response.ok) {
-        const data = await response.json();
-        setTitle(data.title);
-      }
-    } catch (error) {
-      console.error("Failed to fetch dynamic title:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fallback title
-  const displayTitle = title || `${DEFAULT_AUTHOR.name.split(" ")[0]}'s Blog`;
+  // Static title for consistent branding
+  const displayTitle = "Sudo Make Me Sandwich";
 
   return (
     <header className="mb-16 mt-8">
@@ -41,38 +18,15 @@ const Header = () => {
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative bg-white dark:bg-slate-800 rounded-lg p-2 border-2 border-transparent group-hover:border-blue-500 dark:group-hover:border-blue-400 transition-all duration-300">
-                <svg
-                  className="w-8 h-8 text-blue-600 dark:text-blue-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
+              <div className="relative bg-white dark:bg-slate-800 rounded-lg p-1 border-2 border-transparent group-hover:border-blue-500 dark:group-hover:border-blue-400 transition-all duration-300 overflow-hidden flex items-center justify-center">
+                <Logo className="w-10 h-10 text-black dark:text-white" />
               </div>
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight py-1">
-                {isLoading ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      {DEFAULT_AUTHOR.name.split(" ")[0]}'s
-                    </span>
-                    <span className="text-gray-900 dark:text-gray-100">Blog</span>
-                    <span className="inline-block w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
-                  </span>
-                ) : (
-                  <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
-                    {displayTitle}
-                  </span>
-                )}
+                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+                  {displayTitle}
+                </span>
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Stories & Insights

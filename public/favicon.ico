@@ -1,0 +1,18 @@
+<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .logo-text { font-family: 'Times New Roman', serif; font-size: 140px; fill: #333; }
+      .slash { stroke: #333; stroke-width: 4; }
+      @media (prefers-color-scheme: dark) {
+        .logo-text { fill: #ffffff; }
+        .slash { stroke: #ffffff; }
+      }
+    </style>
+  </defs>
+  
+  <g transform="translate(150, 140)">
+    <text x="-50" y="-10" class="logo-text" text-anchor="middle">S</text>
+    <line x1="-40" y1="70" x2="50" y2="-80" class="slash" />
+    <text x="35" y="100" class="logo-text" text-anchor="middle">B</text>
+  </g>
+</svg>

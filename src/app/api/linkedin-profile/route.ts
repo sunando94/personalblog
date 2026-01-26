@@ -1,13 +1,37 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 /**
- * Fetches LinkedIn profile picture
- * Note: LinkedIn doesn't provide a public API, so we use alternative methods
+ * Fetches LinkedIn profile picture and name
  */
 export async function GET() {
   const linkedinUrl = "https://www.linkedin.com/in/sb1994";
 
   try {
+    // Method 0: Try using the authenticated session if available
+    const cookieStore = await cookies();
+    const token = cookieStore.get("linkedin_access_token")?.value;
+
+    if (token) {
+      try {
+        const response = await fetch("https://api.linkedin.com/v2/userinfo", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return NextResponse.json({
+            image: data.picture,
+            name: data.name || data.given_name + " " + data.family_name
+          });
+        }
+      } catch (error) {
+        console.error("LinkedIn userinfo error:", error);
+      }
+    }
+
     // Method 1: Try using LinkPreview API (requires API key)
     if (process.env.LINKPREVIEW_API_KEY) {
       try {
@@ -22,9 +46,10 @@ export async function GET() {
 
         if (response.ok) {
           const data = await response.json();
-          if (data.image) {
-            return NextResponse.json({ image: data.image });
-          }
+          return NextResponse.json({
+            image: data.image,
+            name: data.title?.split(" | ")[0] // Usually "Name | LinkedIn"
+          });
         }
       } catch (error) {
         console.error("LinkPreview API error:", error);
@@ -32,7 +57,6 @@ export async function GET() {
     }
 
     // Method 2: Try using LinkedIn's public profile page structure
-    // This is a workaround and may not always work due to LinkedIn's anti-scraping
     try {
       const response = await fetch(linkedinUrl, {
         headers: {
@@ -42,10 +66,18 @@ export async function GET() {
 
       if (response.ok) {
         const html = await response.text();
+
+        // Extract name
+        let name = null;
+        const ogTitleMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i);
+        if (ogTitleMatch) {
+          name = ogTitleMatch[1].split(" | ")[0];
+        }
+
         // Try to extract profile picture from meta tags or structured data
         const ogImageMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
         if (ogImageMatch && ogImageMatch[1]) {
-          return NextResponse.json({ image: ogImageMatch[1] });
+          return NextResponse.json({ image: ogImageMatch[1], name });
         }
 
         // Try to find image in JSON-LD structured data
@@ -54,26 +86,29 @@ export async function GET() {
           try {
             const jsonData = JSON.parse(jsonLdMatch[1]);
             if (jsonData.image) {
-              return NextResponse.json({ image: jsonData.image });
+              return NextResponse.json({ image: jsonData.image, name });
             }
           } catch (e) {
             // Ignore JSON parse errors
           }
         }
+
+        if (name) return NextResponse.json({ image: null, name });
       }
     } catch (error) {
       console.error("Error fetching LinkedIn page:", error);
     }
 
-    // Method 3: Return null - user can set manually
+    // Method 3: Return null
     return NextResponse.json({
       image: null,
-      message: "Could not automatically fetch profile picture. Please set it manually in src/lib/author.ts",
+      name: null,
+      message: "Could not automatically fetch profile info.",
     });
   } catch (error) {
     console.error("Error in LinkedIn profile fetch:", error);
     return NextResponse.json(
-      { image: null, error: "Failed to fetch profile picture" },
+      { image: null, name: null, error: "Failed to fetch profile info" },
       { status: 500 }
     );
   }
