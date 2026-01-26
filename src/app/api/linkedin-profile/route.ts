@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  */
 export async function GET() {
   const linkedinUrl = "https://www.linkedin.com/in/sb1994";
-  
+
   try {
     // Method 1: Try using LinkPreview API (requires API key)
     if (process.env.LINKPREVIEW_API_KEY) {

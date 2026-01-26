@@ -7,6 +7,7 @@ import Header from "@/app/_components/header";
 import { PostBody } from "@/app/_components/post-body";
 import { PostHeader } from "@/app/_components/post-header";
 import { ShareButtons } from "@/app/_components/share-buttons";
+import { Suspense } from "react";
 
 export default async function Post(props: Params) {
   const params = await props.params;
@@ -30,7 +31,9 @@ export default async function Post(props: Params) {
             author={post.author}
           />
           <PostBody content={content} />
-          <ShareButtons post={post} />
+          <Suspense fallback={<div className="h-20 animate-pulse bg-gray-100 dark:bg-slate-800 rounded-lg" />}>
+            <ShareButtons post={post} />
+          </Suspense>
         </article>
       </Container>
     </main>
