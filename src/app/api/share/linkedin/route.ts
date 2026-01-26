@@ -10,7 +10,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
 
-        const { url, title, description } = await request.json();
+        const { url, title, commentary, excerpt, image } = await request.json();
 
         if (!url || !title) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -30,6 +30,12 @@ export async function POST(request: Request) {
         const profileData = await profileResponse.json();
         const userId = profileData.sub; // This is the user's URN (e.g. urn:li:person:abcdef)
 
+        // LinkedIn media description has a 256 character limit
+        const cardDescription = excerpt || "Read more on my blog";
+        const truncatedCardDescription = cardDescription.length > 253
+            ? cardDescription.substring(0, 250) + "..."
+            : cardDescription;
+
         // Create the UGC Post
         const postBody = {
             author: `urn:li:person:${userId}`,
@@ -37,19 +43,24 @@ export async function POST(request: Request) {
             specificContent: {
                 "com.linkedin.ugc.ShareContent": {
                     shareCommentary: {
-                        text: description || `Check out this post: ${title}`,
+                        text: commentary || `Check out this post: ${title}`,
                     },
                     shareMediaCategory: "ARTICLE",
                     media: [
                         {
                             status: "READY",
                             description: {
-                                text: description || "Read more on my blog",
+                                text: truncatedCardDescription,
                             },
                             originalUrl: url,
                             title: {
                                 text: title,
                             },
+                            thumbnails: image ? [
+                                {
+                                    url: image
+                                }
+                            ] : [],
                         },
                     ],
                 },

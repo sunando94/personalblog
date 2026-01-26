@@ -22,6 +22,12 @@ export function ShareButtons({ post }: Props) {
     ? `${window.location.origin}/posts/${post.slug}`
     : "";
 
+  const fullImageUrl = typeof window !== "undefined"
+    ? post.ogImage.url.startsWith('http')
+      ? post.ogImage.url
+      : `${window.location.origin}${post.ogImage.url}`
+    : "";
+
   // Standard share links (for other platforms or fallback)
   const twitterShareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(post.title)}`;
   const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
@@ -75,7 +81,9 @@ export function ShareButtons({ post }: Props) {
         body: JSON.stringify({
           url: postUrl,
           title: post.title,
-          description: shareText || `Check out this post: ${post.title}`,
+          commentary: shareText,
+          excerpt: post.excerpt,
+          image: fullImageUrl,
         }),
       });
 
@@ -107,8 +115,8 @@ export function ShareButtons({ post }: Props) {
 
       {statusMessage && (
         <div className={`p-4 rounded-lg text-sm ${statusMessage.type === "success"
-            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
           }`}>
           {statusMessage.text}
         </div>
@@ -125,7 +133,7 @@ export function ShareButtons({ post }: Props) {
               </label>
               <textarea
                 className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none resize-none h-32"
-                placeholder={`Check out this post: ${post.title}`}
+                placeholder={post.excerpt || `Check out this post: ${post.title}`}
                 value={shareText}
                 onChange={(e) => setShareText(e.target.value)}
               />
