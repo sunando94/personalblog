@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { registerImageUpload } from "@/lib/linkedin-api";
 
 export async function POST(request: Request) {
     try {
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
 
-        const { url, title, description } = await request.json();
+        const { url, title, commentary, excerpt, image } = await request.json();
 
         if (!url || !title) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -28,27 +29,70 @@ export async function POST(request: Request) {
         }
 
         const profileData = await profileResponse.json();
-        const userId = profileData.sub; // This is the user's URN (e.g. urn:li:person:abcdef)
+        const userId = profileData.sub;
+        const authorUrn = `urn:li:person:${userId}`;
 
-        // Create the UGC Post
-        const postBody = {
-            author: `urn:li:person:${userId}`,
+        // Construct a richer commentary that includes title and excerpt
+        const richCommentary = [
+            title,
+            excerpt ? `\n\n${excerpt}` : '',
+            commentary ? `\n\n💬 ${commentary}` : '',
+            `\n\nRead more: ${url}`
+        ].filter(Boolean).join('');
+
+        let assetUrn = null;
+        let shareMediaCategory = "ARTICLE";
+
+        // Try to upload image if provided and not local
+        if (image && !image.includes("localhost") && !image.includes("127.0.0.1")) {
+            try {
+                // 1. Download the image
+                const imageRes = await fetch(image);
+                if (imageRes.ok) {
+                    const imageBlob = await imageRes.blob();
+
+                    // 2. Register upload
+                    const { uploadUrl, asset } = await registerImageUpload(token, authorUrn);
+
+                    // 3. Upload binary
+                    const uploadRes = await fetch(uploadUrl, {
+                        method: "POST",
+                        body: imageBlob,
+                        headers: {
+                            "Content-Type": imageBlob.type || "image/jpeg",
+                        },
+                    });
+
+                    if (uploadRes.ok) {
+                        assetUrn = asset;
+                        shareMediaCategory = "IMAGE";
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to upload LinkedIn image, falling back to article share:", err);
+            }
+        }
+
+        const cardDescription = excerpt || "Read more on my blog";
+        const truncatedCardDescription = cardDescription.length > 253
+            ? cardDescription.substring(0, 250) + "..."
+            : cardDescription;
+
+        // Create the Post Body
+        const postBody: any = {
+            author: authorUrn,
             lifecycleState: "PUBLISHED",
             specificContent: {
                 "com.linkedin.ugc.ShareContent": {
                     shareCommentary: {
-                        text: description || `Check out this post: ${title}`,
+                        text: richCommentary,
                     },
-                    shareMediaCategory: "ARTICLE",
+                    shareMediaCategory: shareMediaCategory,
                     media: [
                         {
                             status: "READY",
                             description: {
-                                text: description || "Read more on my blog",
-                            },
-                            originalUrl: url,
-                            title: {
-                                text: title,
+                                text: truncatedCardDescription,
                             },
                         },
                     ],
@@ -58,6 +102,15 @@ export async function POST(request: Request) {
                 "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
             },
         };
+
+        // Add specific media fields based on category
+        if (shareMediaCategory === "IMAGE" && assetUrn) {
+            postBody.specificContent["com.linkedin.ugc.ShareContent"].media[0].media = assetUrn;
+            postBody.specificContent["com.linkedin.ugc.ShareContent"].media[0].title = { text: title };
+        } else {
+            postBody.specificContent["com.linkedin.ugc.ShareContent"].media[0].originalUrl = url;
+            postBody.specificContent["com.linkedin.ugc.ShareContent"].media[0].title = { text: title };
+        }
 
         const shareResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
             method: "POST",
@@ -72,7 +125,21 @@ export async function POST(request: Request) {
         if (!shareResponse.ok) {
             const errorText = await shareResponse.text();
             console.error("LinkedIn Share Error:", errorText);
-            return NextResponse.json({ error: "Failed to post to LinkedIn" }, { status: shareResponse.status });
+
+            let errorMessage = "Failed to post to LinkedIn";
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.message || errorJson.serviceErrorCode || errorMessage;
+
+                // Common local development error
+                if (errorMessage.includes("Url") && url.includes("localhost")) {
+                    errorMessage = "LinkedIn cannot access your local development server. Please test this on a deployed site or use a public image URL.";
+                }
+            } catch (e) {
+                // Not JSON
+            }
+
+            return NextResponse.json({ error: errorMessage }, { status: shareResponse.status });
         }
 
         const shareData = await shareResponse.json();
