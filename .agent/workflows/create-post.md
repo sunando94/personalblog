@@ -27,4 +27,8 @@ Start writing your post here...
 ```
 
 6. Open the newly created file for the user to edit.
-7. Remind the user to add a cover image to `/public/assets/blog/[slug]/cover.png`.
+7. Remind the user of the following:
+   - Add a cover image to `/public/assets/blog/[slug]/cover.png`.
+   - The image MUST be exactly **1300x731** pixels.
+   - Use numbered lists (`1, 2, 3`) instead of bullet points (`*` or `-`).
+   - Use `#` for the main title in the post body.

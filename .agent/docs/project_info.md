@@ -7,7 +7,7 @@ This project is a high-performance, aesthetically pleasing personal blog built w
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **Content Management**: Sub-directory based Markdown (`/_posts`)
-- **Markdown Processing**: `remark`, `remark-html`, `gray-matter`
+- **Markdown Processing**: `remark`, `remark-rehype`, `rehype-highlight`, `rehype-stringify`, `gray-matter`
 - **Dynamic AI Features**: 
   - Dynamic Title/Intro generation using Gemini/OpenAI/Anthropic.
   - 25-hour caching for AI-generated content.

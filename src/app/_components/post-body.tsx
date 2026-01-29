@@ -12,53 +12,74 @@ export function PostBody({ content }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const isDarkMode = document.documentElement.classList.contains("dark");
-
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: isDarkMode ? "dark" : "default",
-      securityLevel: "loose",
-      fontFamily: "inherit",
-    });
-
     const renderMermaid = async () => {
       if (!containerRef.current) return;
+
+      const isDarkMode = document.documentElement.classList.contains("dark");
+
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: isDarkMode ? "dark" : "default",
+        securityLevel: "loose",
+        fontFamily: "inherit",
+      });
 
       const mermaidElements = containerRef.current.querySelectorAll(".mermaid, .language-mermaid");
 
       for (const el of Array.from(mermaidElements)) {
-        const target = el.tagName === "CODE" ? el.parentElement : el;
-        if (!target || target.getAttribute("data-processed")) continue;
+        const target = (el.tagName === "CODE" ? el.parentElement : el) as HTMLElement;
+        if (!target) continue;
+
+        // If it was already processed, we need to restore the original text for re-rendering
+        const originalText = target.getAttribute("data-original-text") || el.textContent || "";
+        if (!originalText.trim()) continue;
+
+        if (!target.getAttribute("data-original-text")) {
+          target.setAttribute("data-original-text", originalText);
+        }
 
         try {
-          let text = el.textContent || "";
-          if (!text.trim()) continue;
-
           const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+          const { svg } = await mermaid.render(id, originalText);
 
-          const container = document.createElement("div");
-          // Use the class from CSS modules
-          container.className = markdownStyles["mermaid-container"];
+          // Find or create a container for the SVG
+          let container = target.nextElementSibling as HTMLElement;
+          if (!container || !container.classList.contains("mermaid-rendered-container")) {
+            container = document.createElement("div");
+            container.className = `mermaid-rendered-container ${markdownStyles["mermaid-container"]}`;
+            target.style.display = "none";
+            target.parentNode?.insertBefore(container, target.nextSibling);
+          }
 
-          const { svg } = await mermaid.render(id, text);
           container.innerHTML = svg;
-
-          target.parentNode?.replaceChild(container, target);
           container.setAttribute("data-processed", "true");
         } catch (error) {
           console.error("Mermaid rendering failed:", error);
-          // Optional: Render error message
         }
       }
     };
 
     renderMermaid();
 
-    // Re-render handled by navigation/content change for now
+    // Observe changes to dark mode
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === "class") {
+          renderMermaid();
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
   }, [content]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-0">
+    <div className="mx-auto px-4 md:px-0">
       <div
         ref={containerRef}
         className={markdownStyles["markdown"]}
