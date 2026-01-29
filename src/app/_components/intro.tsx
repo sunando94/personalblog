@@ -56,8 +56,8 @@ export function Intro() {
       </div>
 
       {/* Tagline and description */}
-      <div className="max-w-2xl mb-8">
-        <div className="mb-6">
+      <div className="max-w-6xl">
+        <div>
           {isLoading ? (
             <div className="space-y-3">
               <div className="h-8 bg-gray-200 dark:bg-slate-800 animate-pulse rounded-lg w-full"></div>

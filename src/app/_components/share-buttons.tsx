@@ -25,16 +25,7 @@ export function ShareButtons({ post }: Props) {
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionIndex, setMentionIndex] = useState(-1);
 
-  const MOCK_MENTIONS = [
-    { name: "Sunando Bhattacharya", id: "sb1994", type: "person" },
-    { name: "JJ Kasper", id: "jjk", type: "person" },
-    { name: "Next.js", id: "nextjs", type: "organization" },
-    { name: "LinkedIn", id: "linkedin", type: "organization" },
-  ];
 
-  const filteredMentions = MOCK_MENTIONS.filter(m =>
-    m.name.toLowerCase().includes(mentionQuery.toLowerCase())
-  );
 
   useEffect(() => {
     setMounted(true);
@@ -104,29 +95,7 @@ export function ShareButtons({ post }: Props) {
     }
   };
 
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    const cursorPosition = e.target.selectionStart;
-    const textBeforeCursor = value.substring(0, cursorPosition);
-    const words = textBeforeCursor.split(/\s/);
-    const lastWord = words[words.length - 1];
 
-    if (lastWord.startsWith("@")) {
-      setMentionQuery(lastWord.substring(1));
-      setShowMentions(true);
-      setMentionIndex(cursorPosition);
-    } else {
-      setShowMentions(false);
-    }
-    setShareText(value);
-  };
-
-  const insertMention = (name: string) => {
-    const before = shareText.substring(0, shareText.lastIndexOf("@", mentionIndex));
-    const after = shareText.substring(mentionIndex);
-    setShareText(`${before}@${name} ${after}`);
-    setShowMentions(false);
-  };
 
   const handleShare = async () => {
     setIsSharing(true);
@@ -221,28 +190,9 @@ export function ShareButtons({ post }: Props) {
                   className="w-full text-lg bg-transparent text-gray-800 dark:text-gray-200 placeholder-gray-500 outline-none resize-none min-h-[100px] mb-4"
                   placeholder="Share your thoughts about this article on linkedin"
                   value={shareText}
-                  onChange={handleTextareaChange}
+                  onChange={(e) => setShareText(e.target.value)}
                 />
 
-                {showMentions && filteredMentions.length > 0 && (
-                  <div className="absolute top-full left-0 z-50 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl w-64 overflow-hidden -mt-4 animate-in slide-in-from-top-2">
-                    {filteredMentions.map((mention, i) => (
-                      <button
-                        key={mention.id}
-                        onClick={() => insertMention(mention.name)}
-                        className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-left transition-colors border-b border-gray-100 dark:border-slate-700/50 last:border-none"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs">
-                          {mention.name[0]}
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900 dark:text-white">{mention.name}</div>
-                          <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">{mention.type}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Preview Card */}
@@ -278,31 +228,21 @@ export function ShareButtons({ post }: Props) {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-3 border-t border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-900/50 flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full text-gray-500 dark:text-gray-400 transition-colors tooltip" title="Add emoji">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full text-gray-500 dark:text-gray-400 transition-colors tooltip" title="Schedule for later">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </button>
-                <button
-                  onClick={handleShare}
-                  disabled={isSharing}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-slate-700 text-white rounded-full font-semibold transition-all shadow-md active:scale-95 flex items-center gap-2"
-                >
-                  {isSharing ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                      Posting...
-                    </>
-                  ) : (
-                    "Post"
-                  )}
-                </button>
-              </div>
+            <div className="p-3 border-t border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-900/50 flex items-center justify-end">
+              <button
+                onClick={handleShare}
+                disabled={isSharing}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-slate-700 text-white rounded-full font-semibold transition-all shadow-md active:scale-95 flex items-center gap-2"
+              >
+                {isSharing ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Posting...
+                  </>
+                ) : (
+                  "Post"
+                )}
+              </button>
             </div>
           </div>
         </div>
