@@ -8,7 +8,7 @@ export default async function markdownToHtml(markdown: string) {
   const result = await remark()
     .use(gfm)
     .use(remarkRehype, { allowDangerousHtml: true })
-    .use(rehypeHighlight, { ignoreMissing: true })
+    .use(rehypeHighlight)
     .use(rehypeStringify, { allowDangerousHtml: true })
     .process(markdown);
   return result.toString();
