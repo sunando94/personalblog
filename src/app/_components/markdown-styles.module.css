@@ -9,12 +9,34 @@
   @apply my-6;
 }
 
+.markdown h1 {
+  @apply text-4xl md:text-5xl mb-12 leading-tight font-extrabold tracking-tighter;
+}
+
 .markdown h2 {
-  @apply text-3xl mt-12 mb-4 leading-snug font-bold;
+  @apply text-3xl mt-16 mb-6 leading-snug font-bold border-b border-gray-100 dark:border-slate-800 pb-2;
 }
 
 .markdown h3 {
-  @apply text-2xl mt-8 mb-4 leading-snug font-bold;
+  @apply text-2xl mt-10 mb-4 leading-snug font-bold;
+}
+
+.markdown h4 {
+  @apply text-xl mt-8 mb-4 leading-snug font-bold;
+}
+
+/* Code Blocks */
+.markdown pre {
+  @apply bg-slate-900 text-slate-100 p-6 rounded-xl my-8 overflow-x-auto shadow-inner border border-slate-800;
+}
+
+.markdown code {
+  @apply font-mono text-sm leading-relaxed;
+}
+
+/* Inline code */
+.markdown :not(pre)>code {
+  @apply bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400 font-semibold;
 }
 
 /* Tables */

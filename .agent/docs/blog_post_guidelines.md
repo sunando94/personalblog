@@ -31,8 +31,10 @@ ogImage:
 - **No Emojis**: Do not use emojis anywhere in the post content or frontmatter. They often signal AI-generated text and can distract from the technical depth.
 - **No `<em>` or Excessive Italics**: Do not use `*italics*` or `_italics_` for emphasis (the `em` tag). Use bolding sparsely or let the sentence structure provide the emphasis.
 - **Direct Engagement**: Address the reader as "you" and pose occasional rhetorical questions to maintain interest.
-- **Formatting**: Use Markdown headers (`##`, `###`) for structure.
-- **Code Snippets**: Always specify the language for syntax highlighting (e.g., ` ```typescript `).
+- **Header Hierarchy**: Use `#` for the main title at the top of the body (must match the frontmatter title). Use `##` for main sections and `###` for sub-sections. Do not use `####` unless absolutely necessary, as it can look flat.
+- **No Bullet Points**: Avoid using `*` or `-` for lists. If a list is required, use numbered lists (`1.`, `2.`, `3.`) or integrate the points into the narrative text.
+- **Nested Code Blocks**: If you need to show code that contains other code blocks (common in prompt engineering posts), use quadruple backticks (````) for the outer block and triple backticks (```) for the inner blocks.
+- **Syntax Highlighting**: Always specify the language for syntax highlighting (e.g., ` ```typescript ` or ` ```python `).
 - **Images**: Reference images stored in `/public/assets/blog/SLUG/`.
 - **Mermaid Diagrams**: Support for Mermaid diagrams is available (used for technical explanations).
 - **Internal Links**: Use relative paths for linking to other posts.
@@ -56,3 +58,5 @@ The blog uses an API to generate dynamic intros and titles. Ensure the main titl
 3. [ ] All images have correct paths.
 4. [ ] Code blocks have language tags.
 5. [ ] Mermaid diagrams (if any) are valid.
+6. [ ] Header hierarchy followed (# for title, ## for sections).
+7. [ ] No bullet points (use 1, 2, 3 instead).
