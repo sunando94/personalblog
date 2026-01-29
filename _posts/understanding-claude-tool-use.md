@@ -119,3 +119,166 @@ get_current_datetime("%H:%M")
 
 Creating the function is just the beginning. Next, you will need to define a JSON schema that describes this function to Claude and integrate it into your orchestration layer. This approach keeps your code clean and maintainable while giving Claude the power to handle complex, real-world requests.
 
+## Describing Your Tools: The Power of JSON Schema
+
+Once you have written your tool function, the next step is creating a JSON schema. This essentially acts as a manual that tells Claude exactly what arguments your function expects and how to use them. Think of it as the documentation Claude reads to decide when and how to call your tools.
+
+![The three components of a tool specification: Name, Description, and Schema](/assets/blog/understanding-claude-tool-use/tool-spec-schema.png)
+
+JSON Schema is a widely-used data validation specification. The AI community adopted it because it provides a reliable, structured way to describe function parameters. A complete tool specification consists of three main parts:
+
+1. **name**: A clear, descriptive identifier for your tool (e.g., `get_weather`).
+2. **description**: A narrative explanation of what the tool does, when it should be used, and what it returns.
+3. **input_schema**: The actual JSON schema defining the function's arguments.
+
+### Writing Effective Descriptions
+
+Your tool description is the primary way Claude understands your function's purpose. To make it as effective as possible, I recommend:
+
+1. Aiming for 3-4 clear sentences explaining the tool's core functionality.
+2. Explicitly describing the scenarios where Claude should reach for this tool.
+3. Explaining the type of data the tool returns.
+4. Providing detailed context for each individual argument.
+
+### The Easy Way to Generate Schemas
+
+You don't actually have to write these complex JSON schemas from scratch. One of my favorite "meta" tricks is using Claude to generate the schema for you. Just copy your function code, provide the Anthropic documentation as context, and ask: *"Write a valid JSON schema spec for the purposes of tool calling for this function. Follow the best practices listed in the documentation."*
+
+### Implementing the Schema in Code
+
+Once you have your schema, integrate it using a clean naming pattern. I like to use `function_name_schema` to keep things organized:
+
+```python
+def get_current_datetime(date_format="%Y-%m-%d %H:%M:%S"):
+    if not date_format:
+        raise ValueError("date_format cannot be empty")
+    return datetime.now().strftime(date_format)
+
+get_current_datetime_schema = {
+    "name": "get_current_datetime",
+    "description": "Returns the current date and time formatted according to the specified format",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "date_format": {
+                "type": "string",
+                "description": "A string specifying the format of the returned datetime. Uses Python's strftime format codes.",
+                "default": "%Y-%m-%d %H:%M:%S"
+            }
+        },
+        "required": []
+    }
+}
+```
+
+For even more robustness, you can add type safety using the Anthropic library's `ToolParam` type. This prevents subtle errors when building your request and makes your IDE a lot happier.
+
+```python
+from anthropic.types import ToolParam
+
+get_current_datetime_schema = ToolParam({
+    "name": "get_current_datetime",
+    "description": "Returns the current date and time formatted according to the specified format",
+    # ... rest of schema
+})
+```
+
+## Handling Multi-Block Messages
+
+When you enable tools, Claude's responses change. Instead of a simple block of text, you will start receiving multi-block messages. This is a significant shift in how you handle API responses.
+
+### Making Tool-Enabled API Calls
+
+To let Claude use your new tools, you must include them in the `tools` parameter of your API call. 
+
+```python
+messages = []
+messages.append({
+    "role": "user",
+    "content": "What is the exact time, formatted as HH:MM:SS?"
+})
+
+response = client.messages.create(
+    model=model,
+    max_tokens=1000,
+    messages=messages,
+    tools=[get_current_datetime_schema],
+)
+```
+
+### Understanding the Multi-Block Structure
+
+![Structural anatomy of a multi-block message containing both text and tool instructions](/assets/blog/understanding-claude-tool-use/multi-block-interaction.png)
+
+When Claude decides to call a tool, it returns an assistant message where the `content` is a list of blocks. Typically, this includes:
+
+1. **Text Block**: A human-readable explanation of what Claude is doing (e.g., *"I'll check the current time for you."*).
+2. **ToolUse Block**: The technical instruction for your code, containing a unique ID, the tool name, and the specific input parameters formatted as a dictionary.
+
+Crucially, when you save this to your conversation history, you must preserve the *entire* content structure—not just the text. Claude needs to see its own previous `tool_use` blocks to maintain context in the next turn.
+
+```python
+messages.append({
+    "role": "assistant",
+    "content": response.content
+})
+```
+
+## Closing the Loop: Sending Tool Results
+
+The final step in the workflow is executing the requested function and sending the result back to Claude.
+
+### Running the Function
+
+You can extract the parameters Claude sent and pass them directly to your Python function. Python's keyword argument unpacking (`**`) makes this incredibly clean:
+
+```python
+# Extract parameters from the second block (ToolUse)
+tool_input = response.content[1].input
+
+# Execute and unpack the dictionary into arguments
+result = get_current_datetime(**tool_input)
+```
+
+### The Tool Result Block
+
+Once you have your result, you send it back in a new `user` message using a `tool_result` block.
+
+![Components of a Tool Result: ID matching, Content string, and Error status](/assets/blog/understanding-claude-tool-use/tool-result-workflow.png)
+
+This block requires three key pieces of information:
+
+1. **tool_use_id**: This must exactly match the ID from Claude's original request.
+2. **content**: The actual output of your function, converted to a string.
+3. **is_error**: A boolean flag that tells Claude if something went wrong during execution.
+
+### Managing Multiple Tool Calls
+
+Sometimes Claude will request multiple tools in a single message—for example, asking for both the current time and a weather report. Each request gets its own unique ID. By matching these IDs in your response, you ensure Claude correctly attributes each result, even if you process them in a different order than they were requested.
+
+### The Final Request
+
+When you send the tool results back, remember to still include the `tools` schema in your API call. Even if you aren't expecting another tool call, Claude needs that schema to understand the context of the entire conversation stored in your `messages` list.
+
+```python
+messages.append({
+    "role": "user",
+    "content": [{
+        "type": "tool_result",
+        "tool_use_id": response.content[1].id,
+        "content": "15:04:22",
+        "is_error": False
+    }]
+})
+
+# Get the final natural language response
+final_response = client.messages.create(
+    model=model,
+    max_tokens=1000,
+    messages=messages,
+    tools=[get_current_datetime_schema]
+)
+```
+
+By completing this loop, you have transformed Claude from a text generator into an active agent capable of interacting with the real world through your custom code. This pattern of describing, observing, and responding is the foundation of almost every advanced AI application built today.
+
