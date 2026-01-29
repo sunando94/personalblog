@@ -10,20 +10,22 @@ type Props = {
 
 const CoverImage = ({ title, src, slug }: Props) => {
   const image = (
-    <Image
-      src={src}
-      alt={`Cover Image for ${title}`}
-      className={cn("shadow-sm w-full rounded-lg object-cover aspect-video max-h-[450px] md:max-h-[500px]", {
-        "hover:shadow-xl hover:scale-[1.02] transition-all duration-300": slug,
-      })}
-      width={1300}
-      height={630}
-    />
+    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-slate-800 shadow-lg">
+      <Image
+        src={src}
+        alt={`Cover Image for ${title}`}
+        className={cn("object-cover transition-transform duration-700 ease-in-out", {
+          "hover:scale-105": slug,
+        })}
+        fill
+        priority
+      />
+    </div>
   );
   return (
-    <div className="sm:mx-0 overflow-hidden rounded-lg">
+    <div className="sm:mx-0">
       {slug ? (
-        <Link href={`/posts/${slug}`} aria-label={title} className="block">
+        <Link href={`/posts/${slug}`} aria-label={title} className="block group">
           {image}
         </Link>
       ) : (

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // First fetch the user profile to get the URN
+        // 1. Fetch user profile
         const profileResponse = await fetch("https://api.linkedin.com/v2/userinfo", {
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -32,85 +32,81 @@ export async function POST(request: Request) {
         const userId = profileData.sub;
         const authorUrn = `urn:li:person:${userId}`;
 
-        // Construct a richer commentary that includes title and excerpt
-        const richCommentary = [
-            title,
-            excerpt ? `\n\n${excerpt}` : '',
-            commentary ? `\n\n💬 ${commentary}` : '',
-            `\n\nRead more: ${url}`
-        ].filter(Boolean).join('');
-
-        let assetUrn = null;
-        let shareMediaCategory = "ARTICLE";
-
-        // Try to upload image if provided and not local
-        if (image && !image.includes("localhost") && !image.includes("127.0.0.1")) {
-            try {
-                // 1. Download the image
-                const imageRes = await fetch(image);
-                if (imageRes.ok) {
-                    const imageBlob = await imageRes.blob();
-
-                    // 2. Register upload
-                    const { uploadUrl, asset } = await registerImageUpload(token, authorUrn);
-
-                    // 3. Upload binary
-                    const uploadRes = await fetch(uploadUrl, {
-                        method: "POST",
-                        body: imageBlob,
-                        headers: {
-                            "Content-Type": imageBlob.type || "image/jpeg",
-                        },
-                    });
-
-                    if (uploadRes.ok) {
-                        assetUrn = asset;
-                        shareMediaCategory = "IMAGE";
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to upload LinkedIn image, falling back to article share:", err);
-            }
-        }
+        // 2. Format commentary: Link is always separated from your custom thoughts
+        const richCommentary = commentary
+            ? `${commentary}\n\nRead more: ${url}`
+            : `${title}\n\nRead more: ${url}`;
 
         const cardDescription = excerpt || "Read more on my blog";
         const truncatedCardDescription = cardDescription.length > 253
             ? cardDescription.substring(0, 250) + "..."
             : cardDescription;
 
-        // Create the Post Body
-        const postBody: any = {
+        let assetUrn = null;
+
+        // 3. Handle Image Upload (Crucial for Localhost debugging)
+        if (image) {
+            try {
+                const imageRes = await fetch(image);
+                if (imageRes.ok) {
+                    const imageBlob = await imageRes.blob();
+                    const { uploadUrl, asset } = await registerImageUpload(token, authorUrn);
+                    const uploadRes = await fetch(uploadUrl, {
+                        method: "POST",
+                        body: imageBlob,
+                        headers: { "Content-Type": imageBlob.type || "image/jpeg" },
+                    });
+
+                    if (uploadRes.ok) {
+                        assetUrn = asset;
+                    }
+                }
+            } catch (err) {
+                console.error("LinkedIn Image Upload failed:", err);
+            }
+        }
+
+        /**
+         * LINKEDIN API RULES:
+         * - ARTICLE category: Clickable "box" with link. Does NOT allow custom 'media' assets (URNs).
+         *   LinkedIn scrapes the image from originalUrl. (Won't show on localhost).
+         * - IMAGE category: Shows the uploaded asset. Does NOT show the link "box".
+         * 
+         * To fix your error, we MUST decide which category to use. 
+         * Providing 'media' to 'ARTICLE' causes the "media type validation failed" error.
+         */
+
+        let mediaCategory = "ARTICLE";
+        let mediaElement: any = {
+            status: "READY",
+            originalUrl: url,
+            title: { text: title },
+            description: { text: truncatedCardDescription }
+        };
+
+        // If we successfully uploaded an image, we switch to IMAGE category 
+        // to ensure you actually see the picture on LinkedIn while on localhost.
+        if (assetUrn) {
+            mediaCategory = "IMAGE";
+            mediaElement = {
+                status: "READY",
+                media: assetUrn,
+                title: { text: title }
+            };
+        }
+
+        const postBody = {
             author: authorUrn,
             lifecycleState: "PUBLISHED",
             specificContent: {
                 "com.linkedin.ugc.ShareContent": {
-                    shareCommentary: {
-                        text: richCommentary,
-                    },
-                    shareMediaCategory: shareMediaCategory,
-                    media: [
-                        {
-                            status: "READY",
-                            description: {
-                                text: truncatedCardDescription,
-                            },
-                        },
-                    ],
+                    shareCommentary: { text: richCommentary },
+                    shareMediaCategory: mediaCategory,
+                    media: [mediaElement],
                 },
             },
-            visibility: {
-                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
-            },
+            visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
         };
-
-        // Add specific media fields based on category
-        if (shareMediaCategory === "IMAGE" && assetUrn) {
-            postBody.specificContent["com.linkedin.ugc.ShareContent"].media[0].media = assetUrn;
-            postBody.specificContent["com.linkedin.ugc.ShareContent"].media[0].title = { text: title };
-        } else {
-            postBody.specificContent["com.linkedin.ugc.ShareContent"].media[0].originalUrl = url;
-            postBody.specificContent["com.linkedin.ugc.ShareContent"].media[0].title = { text: title };
-        }
 
         const shareResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
             method: "POST",
@@ -124,28 +120,15 @@ export async function POST(request: Request) {
 
         if (!shareResponse.ok) {
             const errorText = await shareResponse.text();
-            console.error("LinkedIn Share Error:", errorText);
-
-            let errorMessage = "Failed to post to LinkedIn";
-            try {
-                const errorJson = JSON.parse(errorText);
-                errorMessage = errorJson.message || errorJson.serviceErrorCode || errorMessage;
-
-                // Common local development error
-                if (errorMessage.includes("Url") && url.includes("localhost")) {
-                    errorMessage = "LinkedIn cannot access your local development server. Please test this on a deployed site or use a public image URL.";
-                }
-            } catch (e) {
-                // Not JSON
-            }
-
-            return NextResponse.json({ error: errorMessage }, { status: shareResponse.status });
+            console.error("LinkedIn API Error Response:", errorText);
+            return NextResponse.json({ error: errorText }, { status: shareResponse.status });
         }
 
         const shareData = await shareResponse.json();
         return NextResponse.json({ success: true, id: shareData.id });
+
     } catch (error) {
-        console.error("LinkedIn API Error:", error);
+        console.error("LinkedIn Logic Error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

@@ -10,7 +10,7 @@ ogImage:
   url: "/assets/blog/advanced-control-prefilling-and-stop-sequences/cover.png"
 ---
 
-# Advanced AI Control: How to Steering Claude Like a Pro
+# Surgical Precision: How to Steer Claude with Prefills and Stop Sequences
 
 Imagine you're trying to help a friend finish a sentence, or imagine having a "remote control" that can stop someone from talking the second they say a specific word. In the world of AI, we have exactly that! They are called **Message Prefilling** and **Stop Sequences**.
 
@@ -47,7 +47,7 @@ sequenceDiagram
     participant Claude as Claude
     User->>Claude: [User] "Is tea or coffee better?"
     User->>Claude: [Assistant] "Coffee is better because"
-    Note right of Claude: Claude thinks: "I've already started!<br/>Better continue from here."
+    Note right of Claude: Claude thinks: "I've already started!<br>Better continue from here."
     Claude-->>User: "...it has higher caffeine content which helps with alertness."
 ```
 
@@ -102,7 +102,7 @@ These aren't just for fun; they are essential for building real apps. Here are t
 2.  **Short Bursts**: If you're making a trivia game, you can set a stop sequence like `\n` (the "Enter" key) so the AI stops after the first line.
 3.  **Guided Logic**: Use prefilling to make the AI follow a "Chain of Thought" by starting with "Let's think about this step by step: 1. First,".
 
-## Conclusion
+## Putting It All Into Practice
 
 Combining **Prefilling** (to start the car) and **Stop Sequences** (to hit the brakes) gives you total control over the AI's "voice." Instead of just asking for help, you're now acting like a director, making sure every word is exactly where it needs to be.
 

@@ -178,7 +178,7 @@ Here's a simple guide for when to use what:
 
 **For creative tasks** (like brainstorming, writing stories, or coming up with marketing slogans), use a system prompt that encourages creativity, and set temperature between 0.8 and 1.0.
 
-## Final Thoughts
+## Finding Your Sweet Spot
 
 The beautiful thing about system prompts and temperature is that they give you control. You're not just hoping the AI understands you—you're actively shaping how it thinks and responds.
 
