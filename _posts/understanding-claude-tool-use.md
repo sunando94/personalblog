@@ -2,12 +2,12 @@
 title: "Understanding Claude Tool Use"
 date: "2026-01-29"
 excerpt: "Learn how tool use transforms Claude from a static knowledge base into a dynamic assistant that can work with real-time data."
-coverImage: "/assets/blog/understanding-claude-tool-use/cover.png"
+coverImage: "/assets/blog/understanding-claude-tool-use/tools-infographic.png"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
-  url: "/assets/blog/understanding-claude-tool-use/cover.png"
+  url: "/assets/blog/understanding-claude-tool-use/tools-infographic.png"
 ---
 
 # Understanding Claude Tool Use
