@@ -29,6 +29,8 @@ This is a personal blog project built with **Next.js**, **TypeScript**, and **Ta
 ## Custom Features & Configurations
 - **LLM Title Generation**: Dynamic title generation for the header and intro section with a 25-hour cache.
 - **LinkedIn Integration**: Fetches profile information via API or scraping fallbacks.
+- **LinkedIn Post Generation**: Optimized slash command (`/generate-linkedin-post`) and skill based on algorithmic strategies for maximum reach.
+- **Post Scheduling**: Support for a `releaseDate` frontmatter field with a dedicated `/create-future-post` workflow to manage hidden content.
 - **Dark Mode Support**: Styled with Tailwind's dark mode capabilities.
 - **List View**: A dedicated "All Posts" page (`/posts`) that displays posts in a horizontal list format on larger screens.
 

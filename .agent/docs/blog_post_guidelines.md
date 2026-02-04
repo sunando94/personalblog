@@ -20,6 +20,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/SLUG/cover.png"
+releaseDate: "YYYY-MM-DD" or "DD/MM/YYYY" # Optional: Post remains hidden until this date
 ---
 ```
 
@@ -38,6 +39,14 @@ ogImage:
 - **Images**: Reference images stored in `/public/assets/blog/SLUG/`.
 - **Mermaid Diagrams**: Support for Mermaid diagrams is available (used for technical explanations).
 - **Internal Links**: Use relative paths for linking to other posts.
+- **Audience & Complexity Ramping**:
+  - **Implicit Technical Target**: While the target audience remains experienced senior technical leaders (Architects, Staff/Principal Engineers), **do not explicitly mention these roles in the text**. Let the depth of the content, code, and diagrams speak for themselves.
+  - **Progressive Difficulty (Zero to Hero)**: Every post must follow a "Zero to Hero" mental model. Start the post with a simple, high-level introduction accessible to a new graduate (e.g., using broad analogies). As the reader progresses through the document, the complexity must steadily ramp up, ending with deep technical rigor.
+  - **Technical Depth**: By the middle and end of the post, include rigorous technical details, complex Mermaid charts, and mathematical formulas (using proper formatting) to satisfy senior technical leadership.
+- **Word Count & Comprehensiveness**:
+  - **Length**: Each post must be between **500 and 1500 lines** long. Should not include code in the linecount.
+  - **Extreme Detail**: Posts must be as detailed as possible. Do not skip steps or gloss over complexities. Principal engineers value the "how" and "why" behind every decision.
+  - **Code Mandatory**: Always include code blocks showing actual, production-ready implementations for the concepts discussed. Use these code blocks to ground the theoretical discussion in reality.
 
 ## AI & Image Generation
 ### Header Images

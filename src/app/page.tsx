@@ -8,7 +8,7 @@ export default function Index() {
   const allPosts = getAllPosts();
 
   const heroPost = allPosts[0];
-  const recentPosts = allPosts.slice(1);
+  const recentPosts = allPosts.slice(1, 7);
 
   return (
     <main>
