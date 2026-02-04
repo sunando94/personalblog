@@ -17,7 +17,20 @@ export function getPostBySlug(slug: string) {
   const { data, content } = matter(fileContents);
 
   const post = { ...data, slug: realSlug, content } as Post;
-  
+  const today = new Date().toISOString().split("T")[0];
+
+  // Default releaseDate to today if missing
+  if (!post.releaseDate) {
+    post.releaseDate = today;
+  } else {
+    // If user provides DD/MM/YYYY, normalize to YYYY-MM-DD for comparison
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = String(post.releaseDate).match(dateRegex);
+    if (match) {
+      post.releaseDate = `${match[3]}-${match[2]}-${match[1]}`;
+    }
+  }
+
   // Apply default author if author is not fully specified
   if (post.author) {
     post.author = getAuthorWithDefaults(post.author);
@@ -30,8 +43,11 @@ export function getPostBySlug(slug: string) {
 
 export function getAllPosts(): Post[] {
   const slugs = getPostSlugs();
+  const today = new Date().toISOString().split("T")[0];
+
   const posts = slugs
     .map((slug) => getPostBySlug(slug))
+    .filter((post) => post.releaseDate && post.releaseDate <= today)
     // sort posts by date in descending order
     .sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
   return posts;

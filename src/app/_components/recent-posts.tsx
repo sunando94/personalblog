@@ -24,7 +24,7 @@ export function RecentPosts({ posts }: Props) {
         </Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-        {posts.slice(0, 6).map((post) => (
+        {posts.map((post) => (
           <div
             key={post.slug}
             className="group bg-white dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600"

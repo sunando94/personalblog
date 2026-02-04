@@ -25,6 +25,10 @@
   @apply text-xl mt-8 mb-4 leading-snug font-bold;
 }
 
+.markdown a {
+  @apply text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200;
+}
+
 /* Code Blocks */
 .markdown pre {
   @apply bg-slate-900 text-slate-100 p-6 rounded-xl my-8 overflow-x-auto shadow-inner border border-slate-800;

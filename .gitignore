@@ -41,3 +41,6 @@ next-env.d.ts
 
 #codeeditor
 .idea
+
+#postdoc
+/post_docs
