@@ -159,11 +159,17 @@ export function ShareButtons({ post }: Props) {
             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <img
-                    src={userProfile.image || post.author.picture}
-                    alt="Your Profile"
-                    className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-slate-700"
-                  />
+                  {(userProfile.image || post.author.picture) ? (
+                    <img
+                      src={userProfile.image || post.author.picture}
+                      alt="Your Profile"
+                      className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-slate-700"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 font-bold">
+                      {(userProfile.name || post.author.name || "U")[0]}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-1 font-semibold text-gray-900 dark:text-white">
@@ -198,7 +204,13 @@ export function ShareButtons({ post }: Props) {
               {/* Preview Card */}
               <div className="border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden bg-gray-50/50 dark:bg-slate-800/50 transition-all hover:bg-gray-50 dark:hover:bg-slate-800">
                 <div className="p-3 flex items-center gap-2 border-b border-gray-100/50 dark:border-slate-700/50">
-                  <img src={post.author.picture} alt={post.author.name} className="w-10 h-10 rounded-full object-cover" />
+                  {post.author.picture ? (
+                    <img src={post.author.picture} alt={post.author.name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold">
+                      {post.author.name[0]}
+                    </div>
+                  )}
                   <div>
                     <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
                       {post.author.name}

@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/the-math-of-search-cosine-similarity-and-vector-databases/cover.png"
+releaseDate: "04/02/2026"
 ---
 
 # Part 3: The Math of Search — Cosine Similarity and Vector Databases
@@ -183,3 +184,12 @@ graph TD
 RAG is the bridge between unstructured human knowledge and the structured logic of machines. By mastering the geometry of search and the engineering of data pipelines, you are building the foundation of the next generation of intelligent systems.
 
 What will you build next? The frontier of Agentic RAG, Hybrid Retrieval, and Multimodal Vectors is yours to explore.
+
+***
+
+### Part 4 — The Hybrid Retrieval Revolution
+Vector search is powerful, but it's not perfect. What happens when your user searches for a specific SKU or a technical acronym that isn't in the embedding model's vocabulary? 
+
+In the next part, we dive deep into **Hybrid Retrieval**. We'll implement **BM25** (the king of keyword search) and learn how to merge results using **Reciprocal Rank Fusion (RRF)** to build a system that has both "brain" and "memory."
+
+[**Sneak Peek: Beyond Semantic Search →**](/posts/beyond-semantic-search-bm25-hybrid-retrieval)

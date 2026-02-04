@@ -30,11 +30,14 @@ By using RAG, we circumvent this by ensuring that the model *never* has to deal 
 
 ### 2. Token Economics and Throughput
 
-At an architectural level, you must account for the unit economics of your system. Prompt windows are expensive. If you send a 150k token document for every user query:
+At an architectural level, you must account for the unit economics of your system. Prompt windows are expensive. A well-tuned RAG system significantly outperforms brute-force approach across all key metrics:
 
-1.  **Cost**: At $15 per 1M input tokens (Anthropic Claude 3.5 Sonnet rates), each query costs ~$2.25. For a small fleet of 100 users making 10 queries a day, that is a daily burn of $2,250.
-2.  **Latency**: Prefilling a 150k context is a compute-heavy task. Even with optimized hardware, you might face a TTFT (Time to First Token) of 10 to 20 seconds.
-3.  **RAG ROI**: A well-tuned RAG system can answer the same query using only 2k context tokens (3 chunks + prompt). This brings the cost down to ~$0.03 per query and responses under 1.5 seconds.
+| Metric | Brute Force (150k context) | Modular RAG (2k context) | RAG ROI |
+| :--- | :--- | :--- | :--- |
+| **Input Cost** | ~$2.25 per query | ~$0.03 per query | **75x Cost Reduction** |
+| **Daily Burn (100 users)** | $2,250 | $30 | **$2,220 saved per day** |
+| **Latency (TTFT)** | 10 - 20 seconds | < 1.5 seconds | **10x Faster Response** |
+| **Context Quality** | High Noise / Diluted Attention | High Signal / Focused Attention | **Precision Boost** |
 
 ## The Evolution: From Brute Force to Modular RAG
 

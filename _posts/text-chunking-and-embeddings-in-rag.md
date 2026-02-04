@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/text-chunking-and-embeddings-in-rag/cover.png"
+releaseDate: "04/02/2026"
 ---
 
 # Part 2: Text Chunking and Embeddings — The Art of Data Preparation
