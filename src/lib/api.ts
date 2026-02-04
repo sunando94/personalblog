@@ -41,14 +41,27 @@ export function getPostBySlug(slug: string) {
   return post;
 }
 
+export function getToday(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
 export function getAllPosts(): Post[] {
   const slugs = getPostSlugs();
-  const today = new Date().toISOString().split("T")[0];
+  const today = getToday();
 
   const posts = slugs
     .map((slug) => getPostBySlug(slug))
-    .filter((post) => post.releaseDate && post.releaseDate <= today)
+    .filter((post) => post.title && post.releaseDate && post.releaseDate <= today)
     // sort posts by date in descending order
+    .sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
+  return posts;
+}
+
+export function getAllPostsIncludingScheduled(): Post[] {
+  const slugs = getPostSlugs();
+  const posts = slugs
+    .map((slug) => getPostBySlug(slug))
+    .filter((post) => post.title)
     .sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
   return posts;
 }

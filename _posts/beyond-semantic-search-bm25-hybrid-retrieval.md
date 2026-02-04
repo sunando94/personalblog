@@ -1,5 +1,5 @@
 ---
-title: "Beyond Semantic Search: Implementing Hybrid Retrieval with BM25"
+title: "Part 4: Beyond Semantic Search: Implementing Hybrid Retrieval with BM25"
 date: "2026-02-04"
 excerpt: "Why production RAG systems require more than just vector search, and how to implement high-precision hybrid retrieval using BM25 and Reciprocal Rank Fusion."
 coverImage: "/assets/blog/beyond-semantic-search-bm25-hybrid-retrieval/cover.png"
@@ -11,7 +11,7 @@ ogImage:
 releaseDate: "05/02/2026"
 ---
 
-# Beyond Semantic Search: Implementing Hybrid Retrieval with BM25
+# Part 4: Beyond Semantic Search: Implementing Hybrid Retrieval with BM25
 
 Imagine you are building a mission-critical RAG (Retrieval-Augmented Generation) system for a global logistics company. A user asks: "What is the status of shipment INC-2023-Q4-011?" 
 
@@ -137,4 +137,9 @@ Building a RAG system is a journey from "it works on my machine" to "it works fo
 
 By pairing the conceptual "intuition" of vectors with the literal "memory" of BM25, you create a system that is both smart and precise. 
 
-In our next deep dive, we will explore how to automate the evaluation of these hybrid pipelines using AI-assisted metrics. Until then, keep your search heads and your key words aligned.
+***
+
+### 🚀 Next Up: Part 5 — The Multi-Index Architecture
+Now that we've mastered the retrieval algorithms, it's time to talk about **Architectures**. How do you coordinate multiple search engines, handle protocols, and re-rank results at scale?
+
+[**Part 5: The Multi-Index Architecture →**](/posts/the-multi-index-architecture)

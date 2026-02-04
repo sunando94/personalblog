@@ -11,7 +11,7 @@ type Props = {
 };
 
 const Avatar = ({ name, picture, linkedin }: Props) => {
-  const [imgSrc, setImgSrc] = useState(picture);
+  const [imgSrc, setImgSrc] = useState(picture || "");
   const [hasError, setHasError] = useState(false);
 
   // Fallback image if the main image fails to load
@@ -26,12 +26,18 @@ const Avatar = ({ name, picture, linkedin }: Props) => {
 
   const authorContent = (
     <>
-      <img
-        src={imgSrc}
-        className="w-12 h-12 rounded-full mr-4 object-cover"
-        alt={name}
-        onError={handleImageError}
-      />
+      {imgSrc ? (
+        <img
+          src={imgSrc}
+          className="w-12 h-12 rounded-full mr-4 object-cover"
+          alt={name}
+          onError={handleImageError}
+        />
+      ) : (
+        <div className="w-12 h-12 rounded-full mr-4 bg-gray-200 dark:bg-slate-800 flex items-center justify-center font-bold">
+          {name.charAt(0)}
+        </div>
+      )}
       <div className="text-xl font-bold">{name}</div>
     </>
   );

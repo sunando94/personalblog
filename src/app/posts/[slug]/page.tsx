@@ -1,12 +1,13 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAllPosts, getPostBySlug } from "@/lib/api";
+import { getAllPostsIncludingScheduled, getPostBySlug, getToday } from "@/lib/api";
 import markdownToHtml from "@/lib/markdownToHtml";
 import Container from "@/app/_components/container";
 import Header from "@/app/_components/header";
 import { PostBody } from "@/app/_components/post-body";
 import { PostHeader } from "@/app/_components/post-header";
 import { ShareButtons } from "@/app/_components/share-buttons";
+import { ScheduledPostMessage } from "@/app/_components/scheduled-post-message";
 import { Suspense } from "react";
 
 export default async function Post(props: Params) {
@@ -15,6 +16,20 @@ export default async function Post(props: Params) {
 
   if (!post) {
     return notFound();
+  }
+
+  const today = getToday();
+  const isScheduled = post.releaseDate && post.releaseDate > today;
+
+  if (isScheduled) {
+    return (
+      <main>
+        <Container>
+          <Header />
+          <ScheduledPostMessage releaseDate={post.releaseDate} />
+        </Container>
+      </main>
+    );
   }
 
   const content = await markdownToHtml(post.content || "");
@@ -68,7 +83,7 @@ export async function generateMetadata(props: Params): Promise<Metadata> {
 }
 
 export async function generateStaticParams() {
-  const posts = getAllPosts();
+  const posts = getAllPostsIncludingScheduled();
 
   return posts.map((post) => ({
     slug: post.slug,

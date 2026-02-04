@@ -178,3 +178,10 @@ The transition from a basic Vector Store to a **Multi-Index Architecture** with 
 By maintaining consistent protocols between search engines and using LLMs strategically at both the *Preprocessing* (Contextual Retrieval) and *Runtime* (Re-ranking) stages, you build a system that is robust, explainable, and remarkably accurate.
 
 What will you retrieval next? The architecture is ready for whatever you throw at it.
+
+***
+
+### 🚀 Next Up: Part 6 — RAG in the Wild
+Enough theory—let's look at how the biggest AI tools in the world use these patterns. We'll peek under the hood of **Cursor** and **Windsurf** to see how they index your codebase.
+
+[**Part 6: RAG in the Wild — AI IDE Indexing →**](/posts/rag-in-the-wild-ai-ide-indexing)
