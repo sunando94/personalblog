@@ -1,0 +1,78 @@
+name: Publish Blog Post
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Blog post topic"
+        required: true
+      release_date:
+        description: "Release date (YYYY-MM-DD or 'now')"
+        required: true
+        default: "now"
+      additional_context:
+        description: "Additional context (URL, raw text, or file path in repo)"
+        required: false
+      mode:
+        description: "Mode (prod or draft)"
+        required: true
+        default: "prod"
+
+jobs:
+  generate-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create auto-gen branch
+        run: |
+          git checkout -b auto-gen-post || git checkout auto-gen-post
+
+      - name: Generate Post
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TOPIC: ${{ github.event.inputs.topic }}
+          RELEASE_DATE: ${{ github.event.inputs.release_date }}
+          ADDITIONAL_CONTEXT: ${{ github.event.inputs.additional_context }}
+          MODE: ${{ github.event.inputs.mode }}
+        run: node scripts/generate-post.mjs
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "action@github.com"
+          git add _posts/
+          git commit -m "Auto-generate post: ${{ github.event.inputs.topic }}" || echo "No changes to commit"
+          git push origin auto-gen-post --force
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "Auto-generated Post: ${{ github.event.inputs.topic }}" \
+            --body "This post was generated using the Multi-Agent Pipeline (Writer -> Reviewer -> SEO).
+            
+            - **Topic**: ${{ github.event.inputs.topic }}
+            - **Release Date**: ${{ github.event.inputs.release_date }}
+            - **Mode**: ${{ github.event.inputs.mode }}
+            
+            Please review the generated content in the \`auto-gen-post\` branch." \
+            --base main \
+            --head auto-gen-post || echo "PR already exists"
