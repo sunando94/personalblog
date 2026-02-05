@@ -310,7 +310,10 @@ export const mcpDocsHtml = (origin: string) => `<!DOCTYPE html>
                 
                 const response = await fetch('${origin}/api/mcp', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({
                         jsonrpc: '2.0',
                         id: Date.now(),

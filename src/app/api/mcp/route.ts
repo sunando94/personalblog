@@ -13,13 +13,25 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // MCP SSE connection - create a fresh transport AND server per request
+  // MCP SSE connection requirements
   const transport = new WebStandardStreamableHTTPServerTransport();
   const server = createServer();
   
   try {
     await server.connect(transport);
-    return await transport.handleRequest(request);
+    
+    // Normalize headers for the SDK - it expects both text/event-stream and application/json
+    const url = new URL(request.url);
+    const modifiedRequest = new NextRequest(url, {
+      method: request.method,
+      headers: new Headers(request.headers),
+      body: request.body,
+      // @ts-ignore - Next.js RequestInit types
+      duplex: 'half'
+    });
+    modifiedRequest.headers.set("Accept", "text/event-stream, application/json");
+
+    return await transport.handleRequest(modifiedRequest);
   } catch (error) {
     console.error("MCP SSE GET error:", error);
     return new Response("Internal Server Error", { status: 500 });
@@ -31,7 +43,22 @@ export async function POST(request: NextRequest) {
   const server = createServer();
   try {
     await server.connect(transport);
-    return await transport.handleRequest(request);
+    
+    // Normalize headers for POST requests
+    const url = new URL(request.url);
+    const modifiedRequest = new NextRequest(url, {
+      method: request.method,
+      headers: new Headers(request.headers),
+      body: await request.clone().text(), // SDK needs it as text/blob sometimes
+      // @ts-ignore
+      duplex: 'half'
+    });
+    
+    if (!modifiedRequest.headers.has("Accept")) {
+        modifiedRequest.headers.set("Accept", "application/json");
+    }
+
+    return await transport.handleRequest(modifiedRequest);
   } catch (error) {
     console.error("MCP POST error:", error);
     return new Response("Internal Server Error", { status: 500 });
