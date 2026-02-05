@@ -4,6 +4,8 @@ import { NextRequest } from "next/server";
 import { createServer } from "../../../../mcp/server.mjs";
 import { mcpDocsHtml } from "@/lib/mcp-docs";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   // Check if the request is from a browser for documentation
   const acceptHeader = request.headers.get("accept");
@@ -14,22 +16,25 @@ export async function GET(request: NextRequest) {
   }
 
   // MCP SSE connection requirements
-  const transport = new WebStandardStreamableHTTPServerTransport();
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    enableJsonResponse: true,
+  });
   const server = createServer();
   
   try {
     await server.connect(transport);
     
-    // Normalize headers for the SDK - it expects both text/event-stream and application/json
+    // Create a modified request with guaranteed Accept headers
     const url = new URL(request.url);
-    const modifiedRequest = new NextRequest(url, {
+    const headers = new Headers(request.headers);
+    headers.set("Accept", "application/json, text/event-stream");
+    
+    const modifiedRequest = new Request(url, {
       method: request.method,
-      headers: new Headers(request.headers),
-      body: request.body,
-      // @ts-ignore - Next.js RequestInit types
+      headers: headers,
+      // @ts-ignore
       duplex: 'half'
     });
-    modifiedRequest.headers.set("Accept", "text/event-stream, application/json");
 
     return await transport.handleRequest(modifiedRequest);
   } catch (error) {
@@ -39,24 +44,25 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const transport = new WebStandardStreamableHTTPServerTransport();
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    enableJsonResponse: true,
+  });
   const server = createServer();
   try {
     await server.connect(transport);
     
-    // Normalize headers for POST requests
     const url = new URL(request.url);
-    const modifiedRequest = new NextRequest(url, {
+    const headers = new Headers(request.headers);
+    headers.set("Accept", "application/json, text/event-stream");
+    
+    const body = await request.text();
+    const modifiedRequest = new Request(url, {
       method: request.method,
-      headers: new Headers(request.headers),
-      body: await request.clone().text(), // SDK needs it as text/blob sometimes
+      headers: headers,
+      body: body,
       // @ts-ignore
       duplex: 'half'
     });
-    
-    if (!modifiedRequest.headers.has("Accept")) {
-        modifiedRequest.headers.set("Accept", "application/json");
-    }
 
     return await transport.handleRequest(modifiedRequest);
   } catch (error) {
