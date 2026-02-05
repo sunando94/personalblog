@@ -4,7 +4,7 @@ import path from "path";
 import dotenv from "dotenv";
 import matter from "gray-matter";
 
-dotenv.config();
+// dotenv.config() removed to prevent stdout noise during MCP initialization
 
 /**
  * Multi-Agent Pipeline for Blog Generation
