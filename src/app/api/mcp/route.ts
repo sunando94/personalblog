@@ -1,7 +1,7 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { NextRequest } from "next/server";
 // @ts-ignore
-import { server } from "../../../../mcp/server.mjs";
+import { createServer } from "../../../../mcp/server.mjs";
 import { mcpDocsHtml } from "@/lib/mcp-docs";
 
 export async function GET(request: NextRequest) {
@@ -13,8 +13,9 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // MCP SSE connection - create a fresh transport per request to fix "Stateless transport cannot be reused"
+  // MCP SSE connection - create a fresh transport AND server per request
   const transport = new WebStandardStreamableHTTPServerTransport();
+  const server = createServer();
   
   try {
     await server.connect(transport);
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const transport = new WebStandardStreamableHTTPServerTransport();
+  const server = createServer();
   try {
     await server.connect(transport);
     return await transport.handleRequest(request);
