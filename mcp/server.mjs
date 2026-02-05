@@ -70,14 +70,19 @@ export function createServer() {
 
     try {
       if (name === "generate_blog_post") {
+        console.log(`[MCP] Starting blog generation for topic: ${args.topic}`);
+        const startTime = Date.now();
         await generatePost({
           topic: args.topic,
           contextInput: args.additional_context,
           releaseDateInput: args.release_date || "now",
           isDraft: args.mode === "draft",
         });
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[MCP] Blog generation completed in ${duration}s`);
+        
         return {
-          content: [{ type: "text", text: `Post generation triggered for ${args.topic}.` }],
+          content: [{ type: "text", text: `Success! Blog post generated for "${args.topic}" in ${duration}s.` }],
         };
       }
 
