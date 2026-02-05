@@ -87,15 +87,19 @@ export function createServer() {
       }
 
       if (name === "list_posts") {
+        // Use an absolute path or relative to the script location for reliability
         const postsDir = path.join(process.cwd(), "_posts");
+        console.error(`[MCP] Listing posts in: ${postsDir}`);
         const files = await fs.readdir(postsDir);
         return {
           content: [{ type: "text", text: files.filter(f => f.endsWith(".md")).join("\n") }],
         };
       }
-
+ 
       if (name === "read_post") {
-        const filePath = path.join(process.cwd(), "_posts", String(args.slug).endsWith(".md") ? String(args.slug) : `${args.slug}.md`);
+        const fileName = String(args.slug).endsWith(".md") ? String(args.slug) : `${args.slug}.md`;
+        const filePath = path.join(process.cwd(), "_posts", fileName);
+        console.error(`[MCP] Reading post: ${filePath}`);
         const content = await fs.readFile(filePath, "utf-8");
         return {
           content: [{ type: "text", text: content }],
