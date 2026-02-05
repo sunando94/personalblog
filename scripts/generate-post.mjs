@@ -23,7 +23,7 @@ export async function generatePost(options = {}) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-3-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
   // 1. Daily Limit & Scheduling Logic
   const normalizeDate = (dateStr) => {
