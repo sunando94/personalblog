@@ -23,9 +23,24 @@ export async function generatePost(options = {}) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3-flash" });
 
   // 1. Daily Limit & Scheduling Logic
+  const normalizeDate = (dateStr) => {
+    if (!dateStr) return null;
+    const str = String(dateStr).trim();
+    // Handle DD/MM/YYYY
+    const ddmmyyyy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str);
+    if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
+    // Handle YYYY-MM-DD
+    const yyyymmdd = /^\d{4}-\d{2}-\d{2}/.exec(str);
+    if (yyyymmdd) return yyyymmdd[0];
+    
+    // Fallback to JS Date parsing
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+  };
+
   const postsDir = path.join(process.cwd(), "_posts");
   await fs.mkdir(postsDir, { recursive: true });
   
@@ -34,21 +49,25 @@ export async function generatePost(options = {}) {
   
   for (const file of existingFiles) {
     if (file.endsWith(".md")) {
-      const content = await fs.readFile(path.join(postsDir, file), "utf-8");
-      const { data } = matter(content);
-      const rDate = data.releaseDate || data.date;
-      if (rDate) {
-        existingDates.add(new Date(rDate).toISOString().split('T')[0]);
+      try {
+        const content = await fs.readFile(path.join(postsDir, file), "utf-8");
+        const { data } = matter(content);
+        const rDate = normalizeDate(data.releaseDate || data.date);
+        if (rDate) existingDates.add(rDate);
+      } catch (e) {
+        console.warn(`Could not parse date for ${file}: ${e.message}`);
       }
     }
   }
 
   let targetDate = releaseDateInput.toLowerCase() === "now" 
     ? new Date().toISOString().split('T')[0] 
-    : releaseDateInput;
+    : normalizeDate(releaseDateInput) || new Date().toISOString().split('T')[0];
 
   // Ensure 1 post per day
   let dateObj = new Date(targetDate);
+  if (isNaN(dateObj.getTime())) dateObj = new Date();
+
   while (existingDates.has(dateObj.toISOString().split('T')[0])) {
     console.log(`Post already exists for ${dateObj.toISOString().split('T')[0]}. Scheduling for next day...`);
     dateObj.setDate(dateObj.getDate() + 1);
