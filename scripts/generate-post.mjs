@@ -59,12 +59,20 @@ export async function generatePost(options = {}) {
   // 2. Resolve Context
   let resolvedContext = "";
   if (contextInput) {
+    console.log(`Resolving context: ${contextInput.substring(0, 50)}...`);
     if (contextInput.startsWith("http")) {
       try {
-        const res = await fetch(contextInput);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        
+        const res = await fetch(contextInput, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         resolvedContext = await res.text();
         resolvedContext = resolvedContext.replace(/<[^>]*>?/gm, ' ').substring(0, 8000); 
+        console.log("Context resolved via HTTP.");
       } catch (e) {
+        console.error("Context fetch failed or timed out:", e.message);
         resolvedContext = contextInput;
       }
     } else {
@@ -73,6 +81,7 @@ export async function generatePost(options = {}) {
         const stats = await fs.stat(fullPath);
         if (stats.isFile()) {
           resolvedContext = await fs.readFile(fullPath, "utf-8");
+          console.log("Context resolved via local file.");
         } else {
           resolvedContext = contextInput;
         }
