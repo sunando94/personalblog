@@ -23,7 +23,23 @@ export async function generatePost(options = {}) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+  
+  // Model Fallback List
+  const MODELS = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"];
+
+  const generateWithFallback = async (prompt, stageName) => {
+    for (const modelName of MODELS) {
+      try {
+        console.log(`[${stageName}] Attempting with ${modelName}...`);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+      } catch (e) {
+        console.error(`[${stageName}] Failed with ${modelName}: ${e.message}`);
+        if (modelName === MODELS[MODELS.length - 1]) throw e;
+      }
+    }
+  };
 
   // 1. Daily Limit & Scheduling Logic
   const normalizeDate = (dateStr) => {
@@ -124,38 +140,19 @@ export async function generatePost(options = {}) {
 
   const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-  // --- MULTI-AGENT PIPELINE ---
-
-  // AGENT 1: WRITER
-  console.log("Stage 1: Writer Agent starting...");
-  const writerPrompt = await loadPrompt('writer', {
+  // --- UNIFIED GENERATION PIPELINE ---
+  console.log("Unified Blog Agent starting...");
+  const unifiedPrompt = await loadPrompt('unified_post', {
     topic,
     guidelines,
-    context: resolvedContext || "No additional context provided."
-  });
-  const writerResult = await model.generateContent(writerPrompt);
-  const draft = writerResult.response.text();
-
-  // AGENT 2: REVIEWER
-  console.log("Stage 2: Reviewer Agent critiquing...");
-  const reviewerPrompt = await loadPrompt('reviewer', {
-    draft,
-    guidelines
-  });
-  const reviewerResult = await model.generateContent(reviewerPrompt);
-  const reviewedDraft = reviewerResult.response.text();
-
-  // AGENT 3: SEO & PUBLISHER
-  console.log("Stage 3: SEO & Publisher Agent finalising...");
-  const seoPrompt = await loadPrompt('seo', {
-    draft: reviewedDraft,
-    topic,
+    context: resolvedContext || "No additional context provided.",
     today,
     slug,
     finalReleaseDate: finalReleaseDate
   });
-  const seoResult = await model.generateContent(seoPrompt);
-  let finalContent = seoResult.response.text().trim();
+
+  let finalContent = await generateWithFallback(unifiedPrompt, "Unified Agent");
+  finalContent = finalContent.trim();
 
   // Cleanup markdown fences
   if (finalContent.startsWith("```markdown")) {
