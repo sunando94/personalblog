@@ -136,13 +136,38 @@ export async function initDb() {
             timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
           );
         `);
+        // Vector Embeddings Table
+        await client.query('CREATE EXTENSION IF NOT EXISTS vector');
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS post_embeddings (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            slug TEXT UNIQUE NOT NULL,
+            content_hash TEXT NOT NULL,
+            embedding vector(768),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+
+        // Document Chunks Table for Hybrid Search
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS post_chunks (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            slug TEXT NOT NULL REFERENCES post_embeddings(slug) ON DELETE CASCADE,
+            chunk_index INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            embedding vector(768),
+            metadata JSONB,
+            fts tsvector GENERATED ALWAYS AS (to_tsvector('english', content)) STORED,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS post_chunks_slug_idx ON post_chunks(slug);
+          CREATE INDEX IF NOT EXISTS post_chunks_fts_idx ON post_chunks USING GIN(fts);
+        `);
 
         await client.query('COMMIT');
         isInitialized = true;
         console.log("✅ Database schema is up to date.");
-        
-        // Start periodic background sync (every 15 minutes)
-        SyncService.startBackgroundSync(15);
       } catch (e) {
         await client.query('ROLLBACK');
         throw e;

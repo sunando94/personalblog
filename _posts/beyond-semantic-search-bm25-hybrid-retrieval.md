@@ -8,7 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/beyond-semantic-search-bm25-hybrid-retrieval/cover.png"
-releaseDate: "05/02/2026"
+releaseDate: "04/02/2026"
 ---
 
 # Part 4: Beyond Semantic Search: Implementing Hybrid Retrieval with BM25

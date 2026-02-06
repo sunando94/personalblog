@@ -72,21 +72,4 @@ export class SyncService {
       this.isSyncing = false;
     }
   }
-
-  /**
-   * Background task runner
-   */
-  static startBackgroundSync(intervalMinutes: number = 30) {
-    console.log(`📡 [SyncService] Periodic auto-sync scheduled every ${intervalMinutes} minutes.`);
-    
-    // Run immediately on start
-    setTimeout(() => this.reconcile().catch(() => {}), 5000);
-
-    // Schedule periodic runs
-    setInterval(() => {
-      this.reconcile().catch(err => {
-        console.error("Background sync error:", err);
-      });
-    }, intervalMinutes * 60 * 1000);
-  }
 }

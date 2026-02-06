@@ -10,6 +10,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  return performSync();
+}
+
+/**
+ * GET Handler for Vercel Cron
+ */
+export async function GET(req: NextRequest) {
+  const authHeader = req.headers.get("Authorization");
+  
+  // Security check for Vercel Cron
+  // If CRON_SECRET is set, we expect it in the Authorization header
+  if (process.env.CRON_SECRET) {
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return NextResponse.json({ error: "Unauthorized Cron Access" }, { status: 401 });
+    }
+  }
+
+  return performSync();
+}
+
+async function performSync() {
   try {
     const result = await SyncService.reconcile(true); // Force sync
     return NextResponse.json({ 

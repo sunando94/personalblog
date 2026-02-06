@@ -6,13 +6,16 @@ import AssistantClient from "./assistant-client";
 export async function GlobalAssistant() {
   const guidelinesPath = path.join(process.cwd(), ".agent/docs/blog_post_guidelines.md");
   const promptPath = path.join(process.cwd(), "mcp/prompts/assistant.md");
+  const smallPromptPath = path.join(process.cwd(), "mcp/prompts/echobot_small.md");
   
   let guidelines = "";
   let promptTemplate = "";
+  let smallPromptTemplate = "";
   
   try {
     guidelines = await fs.readFile(guidelinesPath, "utf-8");
     promptTemplate = await fs.readFile(promptPath, "utf-8");
+    smallPromptTemplate = await fs.readFile(smallPromptPath, "utf-8");
   } catch (e) {
     console.error("Failed to load assistant configs", e);
   }
@@ -24,6 +27,7 @@ export async function GlobalAssistant() {
     <AssistantClient 
       guidelines={guidelines} 
       promptTemplate={promptTemplate} 
+      smallPromptTemplate={smallPromptTemplate}
       postsContext={postsContext} 
     />
   );

@@ -1,0 +1,12 @@
+{
+    "crons": [
+        {
+            "path": "/api/admin/sync",
+            "schedule": "0 0 * * *"
+        },
+        {
+            "path": "/api/admin/index-posts",
+            "schedule": "0 1 * * *"
+        }
+    ]
+}

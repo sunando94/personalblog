@@ -12,7 +12,7 @@ export const AVAILABLE_MODELS: Model[] = [
     name: "SmolLM2 135M (Ultra-light)",
     size: "~200MB",
     description: "Fastest. Best for quick chat. May struggle with complex summaries.",
-    enabled: false
+    enabled: true
   },
   {
     id: "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",

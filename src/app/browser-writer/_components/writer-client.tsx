@@ -16,10 +16,12 @@ interface Message {
 interface WriterClientProps {
   guidelines: string;
   promptTemplate: string;
+  smallChatPrompt: string;
+  smallGeneratorPrompt: string;
   postsContext: string;
 }
 
-export default function WriterClient({ guidelines, promptTemplate, postsContext }: WriterClientProps) {
+export default function WriterClient({ guidelines, promptTemplate, smallChatPrompt, smallGeneratorPrompt, postsContext }: WriterClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -367,9 +369,8 @@ export default function WriterClient({ guidelines, promptTemplate, postsContext 
         let finalSystemPrompt = systemPrompt;
         
         if (isSmallModel) {
-          finalSystemPrompt = `You are EchoBot Writer. Help the user with blog drafts.
-Today: ${today}
-Rules: Concise expert tone. Markdown only. Follow instructions exactly.`;
+          finalSystemPrompt = smallChatPrompt
+            .replace("{{today}}", today);
         }
 
         const chatHistory = [
@@ -381,7 +382,10 @@ Rules: Concise expert tone. Markdown only. Follow instructions exactly.`;
         const chunks = await activeEngine.chat.completions.create({ 
           messages: chatHistory as any, 
           stream: true,
-          stream_options: { include_usage: true }
+          stream_options: { include_usage: true },
+          temperature: isSmallModel ? 0.3 : 0.7,
+          top_p: isSmallModel ? 0.9 : 1.0,
+          stop: isSmallModel ? ["User:", "###", "<|endoftext|>"] : undefined
         });
         let fullText = "";
         setMessages(prev => [...prev, { role: "assistant", content: "" }]);
@@ -439,17 +443,20 @@ Rules: Concise expert tone. Markdown only. Follow instructions exactly.`;
         let finalSystemPrompt = systemPrompt;
 
         if (isSmallModel) {
-          finalSystemPrompt = `You are EchoBot Writer. Generate a blog post about: ${topic}
-Today: ${today}
-Expert guidelines: ${guidelines.substring(0, 500)}...
-Output EXACT Markdown starting with frontmatter. No chatter.`;
+          finalSystemPrompt = smallGeneratorPrompt
+            .replace("{{topic}}", topic)
+            .replace("{{today}}", today)
+            .replace("{{guidelines_preview}}", guidelines.substring(0, 500));
         }
 
         const chatHistory = [{ role: "system", content: finalSystemPrompt }, ...currentMessages.map((m: any) => ({ role: m.role, content: m.content })), { role: "user", content: topic }];
         const chunks = await activeEngine.chat.completions.create({ 
           messages: chatHistory as any, 
           stream: true,
-          stream_options: { include_usage: true }
+          stream_options: { include_usage: true },
+          temperature: isSmallModel ? 0.2 : 0.7, // Lower temp for generation
+          top_p: isSmallModel ? 0.85 : 1.0,
+          stop: isSmallModel ? ["User:", "###", "<|endoftext|>"] : undefined
         });
         let fullText = "";
         setMessages(prev => [...prev, { role: "assistant", content: "" }]);

@@ -15,6 +15,14 @@ export default async function BrowserWriterPage() {
     path.join(process.cwd(), "mcp/prompts/assistant.md"),
     "utf-8"
   );
+  const smallChatPrompt = await fs.readFile(
+    path.join(process.cwd(), "mcp/prompts/writer_small.md"),
+    "utf-8"
+  );
+  const smallGeneratorPrompt = await fs.readFile(
+    path.join(process.cwd(), "mcp/prompts/writer_generator_small.md"),
+    "utf-8"
+  );
 
   const posts = getAllPostsIncludingScheduled();
   const postsContext = posts.map(p => `- TITLE: ${p.title}\n  SLUG: ${p.slug}\n  DATE: ${p.date}\n  EXCERPT: ${p.excerpt}`).join('\n\n');
@@ -37,6 +45,8 @@ export default async function BrowserWriterPage() {
               <WriterClient 
                 guidelines={guidelines} 
                 promptTemplate={promptTemplate} 
+                smallChatPrompt={smallChatPrompt}
+                smallGeneratorPrompt={smallGeneratorPrompt}
                 postsContext={postsContext}
               />
             </Suspense>

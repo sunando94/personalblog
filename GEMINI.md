@@ -34,6 +34,8 @@ This is a personal blog project built with **Next.js**, **TypeScript**, and **Ta
 - **Dark Mode Support**: Styled with Tailwind's dark mode capabilities.
 - **List View**: A dedicated "All Posts" page (`/posts`) that displays posts in a horizontal list format on larger screens.
 - **Notification System**: Redis-backed real-time notifications with 7-day TTL, auto-refresh, and in-memory fallback. See `/docs/NOTIFICATIONS.md` for details.
+- **Cache Synchronization**: Automated PostgreSQL-to-Redis reconciliation via Vercel Cron (runs daily at midnight).
+- **Vector Indexing**: Daily automated embedding generation for all blog posts using Gemini (gemini-embedding-001) with 768 dimensions, stored in PostgreSQL for semantic search readiness.
 
 ## Development Conventions
 - **Naming**: Uses PascalCase for components and camelCase for functions/variables.

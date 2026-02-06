@@ -1,6 +1,6 @@
 ---
 title: "Part 6: RAG in the Wild — How AI IDEs Index Your World"
-date: "2026-02-09"
+date: "2026-02-06"
 excerpt: "An architectural exploration into the RAG systems powering modern AI IDEs like Cursor and Windsurf, and how they solve the codebase-scale retrieval problem."
 coverImage: "/assets/blog/rag-in-the-wild-ai-ide-indexing/cover.png"
 author:
@@ -8,7 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/rag-in-the-wild-ai-ide-indexing/cover.png"
-releaseDate: "09/02/2026"
+releaseDate: "06/02/2026"
 ---
 
 # Part 6: RAG in the Wild — How AI IDEs Index Your World
