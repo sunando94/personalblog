@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getTokenPayload, getAllUsers } from "@/lib/mcp-auth";
+import { getTokenPayload, getAllUsers, setPendingRole } from "@/lib/mcp-auth";
 import { createNotification } from "@/lib/notifications";
 
 export async function POST(request: Request) {
@@ -25,6 +25,8 @@ export async function POST(request: Request) {
   const requestedRole = currentRole === 'guest' ? 'writer' : 'admin';
 
   try {
+    await setPendingRole(payload.sub, requestedRole);
+
     const allUsers = await getAllUsers();
     console.log(`📋 [API] Total Users Found: ${allUsers.length}`);
     
@@ -49,7 +51,14 @@ export async function POST(request: Request) {
         read: false,
         action: {
           label: "Review Request",
-          href: `/admin?search=${payload.id}`
+          href: `/admin?search=${payload.sub}`
+        },
+        primaryAction: {
+          label: `Approve as ${requestedRole}`,
+          endpoint: "/api/admin/users",
+          method: "PATCH",
+          body: { userId: payload.sub, role: requestedRole },
+          successMessage: `User ${payload.name} promoted to ${requestedRole}.`
         }
       })
     );

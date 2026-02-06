@@ -1,6 +1,6 @@
 ---
 title: "Part 5: The Multi-Index Architecture: Building an Extensible Hybrid Retriever"
-date: "2026-02-04"
+date: "2026-02-06"
 excerpt: "A deep dive into the software engineering patterns behind high-scale RAG systems, focusing on the Multi-Index Retriever pattern, LLM Re-ranking, and Contextual Retrieval."
 coverImage: "/assets/blog/the-multi-index-architecture/cover.png"
 author:

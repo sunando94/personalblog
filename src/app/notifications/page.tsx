@@ -15,6 +15,13 @@ interface Notification {
     label: string;
     href: string;
   };
+  primaryAction?: {
+    label: string;
+    endpoint: string;
+    method: "POST" | "PATCH" | "DELETE";
+    body?: any;
+    successMessage?: string;
+  };
 }
 
 // Get or create a persistent user ID for this browser
@@ -170,6 +177,36 @@ export default function NotificationsPage() {
       } catch (err) {
         console.error("Error clearing notifications:", err);
       }
+    }
+  };
+
+  const handlePrimaryAction = async (notificationId: string, action: any) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("mcp_token");
+      const response = await fetch(action.endpoint, {
+        method: action.method,
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(action.body),
+      });
+
+      if (response.ok) {
+        // Mark as read and maybe show success toast/message
+        await markAsRead(notificationId);
+        if (action.successMessage) {
+            setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, message: `✅ ${action.successMessage}`, primaryAction: undefined } : n));
+        }
+      } else {
+        const data = await response.json();
+        alert(`Action failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+        alert(`Error: ${err.message}`);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -357,6 +394,15 @@ export default function NotificationsPage() {
                         </p>
                         
                         <div className="flex items-center gap-3">
+                          {notification.primaryAction && (
+                            <button
+                              onClick={() => handlePrimaryAction(notification.id, notification.primaryAction)}
+                              className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-indigo-500/20"
+                            >
+                              {notification.primaryAction.label}
+                            </button>
+                          )}
+
                           {notification.action && (
                             <Link
                               href={notification.action.href}
@@ -371,7 +417,7 @@ export default function NotificationsPage() {
                               onClick={() => markAsRead(notification.id)}
                               className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
                             >
-                              Mark as read
+                              {notification.primaryAction ? "Dismiss" : "Mark as read"}
                             </button>
                           )}
                         </div>

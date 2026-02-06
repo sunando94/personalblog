@@ -128,7 +128,7 @@ const Header = () => {
             <nav className="hidden lg:flex items-center gap-6">
               <NavLink href="/">Home</NavLink>
               <NavLink href="/posts">Posts</NavLink>
-              <NavLink href="/browser-writer">AI Lab</NavLink>
+              <NavLink href="/browser-writer">Contribute</NavLink>
             </nav>
 
             <div className="flex items-center gap-4 pl-8 border-l border-gray-100 dark:border-slate-800 h-8">

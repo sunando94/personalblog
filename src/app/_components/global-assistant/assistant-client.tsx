@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import * as webllm from "@mlc-ai/web-llm";
+import { AVAILABLE_MODELS } from "@/lib/models";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -27,7 +29,8 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [selectedModel, setSelectedModel] = useState("Llama-3.2-1B-Instruct-q4f32_1-MLC");
+  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
+  const [showModelSelector, setShowModelSelector] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load model preference
@@ -35,6 +38,18 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
     const preferredModel = localStorage.getItem("preferred_model");
     if (preferredModel) setSelectedModel(preferredModel);
   }, []);
+
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId);
+    localStorage.setItem("preferred_model", modelId);
+    setShowModelSelector(false);
+    
+    // Reset engine to force re-init with new model on next message
+    if (engine) {
+      console.log(`Switching to model: ${modelId}. Neural Engine will re-init...`);
+      setEngine(null);
+    }
+  };
 
   // Auto-Sleep Logic: 5 minutes of inactivity
   const resetInactivityTimer = useCallback(() => {
@@ -227,19 +242,53 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
           
           {/* Header */}
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 relative">
                   <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                   </div>
                   <div>
                     <h3 className="font-black text-slate-900 dark:text-white leading-none mb-1">Spark AI</h3>
-                    <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => setShowModelSelector(!showModelSelector)}
+                      className="flex items-center gap-1 group/btn"
+                    >
                        <span className={`w-1.5 h-1.5 rounded-full ${engine ? 'bg-green-500 animate-pulse' : loading ? 'bg-blue-500 animate-bounce' : 'bg-slate-400'}`}></span>
-                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          {engine ? 'Neural Engine Active' : loading ? 'Waking Neural Forge...' : 'Auto-Wake on Message'}
+                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/btn:text-indigo-500 transition-colors">
+                          {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || 'Select Model'}
                        </span>
-                    </div>
+                       <svg className={`w-3 h-3 text-slate-300 transition-transform ${showModelSelector ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
                   </div>
+
+                  {/* Model Selector Dropdown */}
+                  {showModelSelector && (
+                    <div className="absolute top-12 left-0 w-64 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                      <div className="p-2 max-h-[400px] overflow-y-auto">
+                        <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-slate-800 mb-1">Select Neural Model</div>
+                        {AVAILABLE_MODELS.map((model) => (
+                          <button
+                            key={model.id}
+                            onClick={() => handleModelChange(model.id)}
+                            className={`w-full text-left px-3 py-3 rounded-xl transition-all flex items-center justify-between group ${
+                              selectedModel === model.id 
+                                ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-900/30' 
+                                : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                            }`}
+                          >
+                            <div>
+                              <p className={`text-xs font-black ${selectedModel === model.id ? 'text-indigo-600' : 'text-slate-700 dark:text-slate-300'}`}>{model.name}</p>
+                              <p className="text-[10px] text-slate-400">{model.size}</p>
+                            </div>
+                            {selectedModel === model.id && (
+                              <div className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-white scale-75">
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button 
@@ -268,7 +317,35 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
                <div className="h-full flex flex-col items-center justify-center text-center p-4">
                   <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center mb-6 text-2xl">🧠</div>
                   <h4 className="text-xl font-black mb-2">Welcome to Spark AI!</h4>
-                  <p className="text-xs text-slate-500 font-medium">I'm your local AI. I know your posts and can help you write, summarize, or just chat. Feel free to explore! Want to contribute? Find me on LinkedIn.</p>
+                  <p className="text-xs text-slate-500 font-medium mb-6">I'm your local AI. I know your posts and can help you write, summarize, or just chat. Feel free to explore!</p>
+                  
+                  <div className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-10 group-hover:opacity-20 transition duration-1000"></div>
+                    <div className="relative p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
+                       <div className="flex gap-4">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                             </svg>
+                          </div>
+                          <div className="text-left">
+                             <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-wider mb-1">Local Processing Notice</p>
+                             <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                                To protect your privacy, this AI runs entirely on your GPU. A small neural model (~200MB) will be securely downloaded to your browser's persistent cache.
+                             </p>
+                             <div className="mt-3 flex items-center gap-2">
+                                <Link 
+                                  href="/settings" 
+                                  className="text-[9px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
+                                >
+                                  Manage Storage 
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"></path></svg>
+                                </Link>
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
                </div>
              )}
 
