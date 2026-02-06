@@ -69,11 +69,9 @@ export async function GET(req: NextRequest) {
   // Create JWT for this user
   const authData = await createSocialTokenPair(profile);
 
-  // Redirect back to profile or home with the token in a way the client can catch it.
-  // We'll use a post-login page that saves it to localStorage and redirects.
-  const response = NextResponse.redirect(`${origin}/profile`);
+  // Redirect back to request origin (state) or profile
+  const returnTo = searchParams.get("state") || "/profile";
   
-  // We can pass the token in a cookie temporarily or as a URL param if we trust it.
-  // Let's use a URL param for simplicity in this demo, but usually cookies are better.
-  return NextResponse.redirect(`${origin}/profile?token=${authData.access_token}&name=${encodeURIComponent(authData.name)}&picture=${encodeURIComponent(authData.picture || "")}`);
+  // We pass the token in URL params so the client page can grab it
+  return NextResponse.redirect(`${origin}${returnTo}?token=${authData.access_token}&name=${encodeURIComponent(authData.name)}&picture=${encodeURIComponent(authData.picture || "")}`);
 }

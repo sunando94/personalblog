@@ -28,6 +28,34 @@ function ProfileContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [diagData, setDiagData] = useState<any>(null);
+  
+  // Request Access State
+  const [requestStatus, setRequestStatus] = useState<"idle" | "success" | "error">("idle");
+
+  const handleRequestAccess = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("mcp_token");
+      const res = await fetch("/api/request-writer-access", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || "Request failed");
+      
+      setRequestStatus("success");
+    } catch (err: any) {
+      setError(err.message);
+      setRequestStatus("error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const refreshState = () => {
     const token = localStorage.getItem("mcp_token");
@@ -184,77 +212,128 @@ function ProfileContent() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                   {/* Left: Token Gen */}
+                   {/* Left: Role Management & Tokens */}
                    <div className="lg:col-span-7 space-y-10">
-                      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 border border-slate-200 dark:border-slate-800 shadow-2xl shadow-blue-500/5">
-                        <div className="flex items-center justify-between mb-8 cursor-pointer group" onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}>
-                          <h2 className="text-2xl font-black tracking-tight">Access Management</h2>
-                          <div className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-all text-[10px] font-black uppercase tracking-widest ${isAdvancedOpen ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400 group-hover:text-blue-600'}`}>
-                             {isAdvancedOpen ? 'Close Advanced' : 'Open Advanced'}
-                             <svg className={`w-3 h-3 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
-                          </div>
+                      
+                      {currentUser?.role === 'guest' ? (
+                        /* Guest View: Request Access */
+                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 border border-slate-200 dark:border-slate-800 shadow-2xl shadow-blue-500/5">
+                           <div className="bg-blue-50 dark:bg-blue-900/20 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-2xl">🚀</div>
+                           <h2 className="text-2xl font-black tracking-tight mb-4">Unlock Writer Privileges</h2>
+                           <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+                             Guests have read-only access. To write posts, commit changes, and use the neural writing tools, you need to request <span className="text-blue-600 font-bold">Writer Access</span>.
+                           </p>
+                           
+                           {requestStatus === 'success' ? (
+                             <div className="p-6 bg-green-50 dark:bg-green-900/20 text-green-600 font-bold rounded-2xl border border-green-100 dark:border-green-800 flex items-center gap-3">
+                               <span className="text-xl">✅</span>
+                               Your request for Writer access has been sent.
+                             </div>
+                           ) : (
+                             <button 
+                               onClick={handleRequestAccess}
+                               disabled={loading}
+                               className="w-full py-5 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95 disabled:opacity-50 disabled:scale-100"
+                             >
+                               {loading ? "Sending Request..." : "Request Writer Access"}
+                             </button>
+                           )}
+                           {error && <div className="mt-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold border border-red-100 dark:border-red-900/30">⚠️ {error}</div>}
                         </div>
-
-                        {isAdvancedOpen ? (
-                          <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div>
-                               <p className="text-[10px] font-bold text-slate-400 mb-4 italic leading-relaxed">
-                                 💡 Pro-tip: Providing the correct secret will automatically elevate your account to <span className="text-blue-600 font-black">ADMIN</span> status.
-                               </p>
-                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Admin Secret</label>
-                              <input 
-                                type="password" 
-                                value={adminSecret}
-                                onChange={(e) => setAdminSecret(e.target.value)}
-                                placeholder="Enter your system secret..."
-                                className="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all font-bold text-sm"
-                              />
-                            </div>
-                            {error && <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold border border-red-100 dark:border-red-900/30">⚠️ {error}</div>}
+                      ) : currentUser?.role === 'writer' ? (
+                        /* Writer View: Request Admin */
+                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 border border-slate-200 dark:border-slate-800 shadow-2xl shadow-purple-500/5">
+                           <div className="bg-purple-50 dark:bg-purple-900/20 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-2xl">⚡️</div>
+                           <h2 className="text-2xl font-black tracking-tight mb-4">Upgrade to Admin</h2>
+                           <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+                             You have Writer privileges. To manage users, configure system settings, and oversee the platform, request <span className="text-purple-600 font-bold">Admin Access</span>.
+                           </p>
+                           
+                           {requestStatus === 'success' ? (
+                             <div className="p-6 bg-green-50 dark:bg-green-900/20 text-green-600 font-bold rounded-2xl border border-green-100 dark:border-green-800 flex items-center gap-3">
+                               <span className="text-xl">✅</span>
+                               Your request for Admin access has been sent.
+                             </div>
+                           ) : (
+                             <button 
+                               onClick={handleRequestAccess}
+                               disabled={loading}
+                               className="w-full py-5 rounded-2xl bg-purple-600 text-white font-black hover:bg-purple-700 transition-all shadow-xl shadow-purple-600/20 active:scale-95 disabled:opacity-50 disabled:scale-100"
+                             >
+                               {loading ? "Sending Request..." : "Request Admin Access"}
+                             </button>
+                           )}
+                           {error && <div className="mt-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold border border-red-100 dark:border-red-900/30">⚠️ {error}</div>}
+                        </div>
+                      ) : currentUser?.role === 'admin' ? (
+                        /* Admin View: Status */
+                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 border border-slate-200 dark:border-slate-800 shadow-xl relative overflow-hidden">
+                           <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/10 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+                           <div className="bg-slate-900 text-white w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-2xl relative z-10">🛡️</div>
+                           <h2 className="text-2xl font-black tracking-tight mb-4 relative z-10">System Administrator</h2>
+                           <p className="text-slate-500 font-medium mb-8 leading-relaxed relative z-10">
+                             You have full control over the platform. You can manage users, generate tokens, and configure global settings from the Admin Panel.
+                           </p>
+                           <a href="/admin" className="inline-block px-8 py-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform relative z-10">
+                             Go to Admin Panel
+                           </a>
+                        </div>
+                      ) : (
+                        /* Fallback: Not Authenticated */
+                         <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col items-center justify-center text-center">
+                            <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-2xl">🔒</div>
+                            <h2 className="text-2xl font-black tracking-tight mb-4">Authentication Required</h2>
+                            <p className="text-slate-500 font-medium mb-8 leading-relaxed max-w-sm">
+                              Please sign in with LinkedIn to view your access level and manage API tokens.
+                            </p>
                             <button 
-                              onClick={handleGenerate}
-                              disabled={loading}
-                              className="w-full py-5 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-black font-black hover:scale-[1.01] active:scale-95 transition-all shadow-xl disabled:opacity-50"
+                              onClick={() => setActiveTab("identity")}
+                              className="px-8 py-4 rounded-xl bg-blue-600 text-white font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
                             >
-                              {loading ? "Issuing..." : "Issue Access JWT"}
+                              Go to Login
                             </button>
-                          </div>
-                        ) : (
-                           <div className="py-12 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl bg-slate-50/30">
-                              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest italic px-10">Advanced settings for manual JWT generation are hidden. Click "Open Advanced" to view.</p>
-                           </div>
-                        )}
-                      </div>
+                         </div>
+                      )}
 
                    </div>
 
-                   {/* Right: JWT Display */}
+                   {/* Right: JWT Display (Only for Writers/Admins) */}
                    <div className="lg:col-span-5">
-                      <div className="bg-slate-950 rounded-[2.5rem] p-10 text-white border border-slate-800 shadow-2xl h-full flex flex-col relative overflow-hidden group">
-                          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-8 flex items-center gap-2">
-                             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                             Live Access Token
-                          </h3>
-                          {activeToken ? (
-                            <div className="flex-1 flex flex-col">
-                               <div className="flex-1 p-8 bg-black/50 rounded-3xl font-mono text-[11px] break-all border border-white/5 text-blue-300/60 leading-relaxed overflow-auto max-h-[500px] shadow-inner">
-                                {activeToken}
-                              </div>
-                              <button 
-                                onClick={() => navigator.clipboard.writeText(activeToken)}
-                                className="mt-8 w-full py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest transition-all border border-white/5 active:scale-95 shadow-sm"
-                              >
-                                Copy Credentials
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center py-32 text-center text-slate-500 italic text-xs px-10">
-                              <div className="text-5xl mb-6 opacity-20">🎫</div>
-                              <p>Secure session expired. Generate a new token to interact with the API.</p>
-                            </div>
-                          )}
-                      </div>
+                      {currentUser?.role !== 'guest' && (
+                        <div className="bg-slate-950 rounded-[2.5rem] p-10 text-white border border-slate-800 shadow-2xl h-full flex flex-col relative overflow-hidden group">
+                              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-8 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                                Live Access Token
+                              </h3>
+                              {activeToken ? (
+                                <div className="flex-1 flex flex-col">
+                                  <div className="flex-1 p-8 bg-black/50 rounded-3xl font-mono text-[11px] break-all border border-white/5 text-blue-300/60 leading-relaxed overflow-auto max-h-[500px] shadow-inner">
+                                    {activeToken}
+                                  </div>
+                                  <button 
+                                    onClick={() => navigator.clipboard.writeText(activeToken)}
+                                    className="mt-8 w-full py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest transition-all border border-white/5 active:scale-95 shadow-sm"
+                                  >
+                                    Copy Credentials
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center py-32 text-center text-slate-500 italic text-xs px-10">
+                                  <div className="text-5xl mb-6 opacity-20">🎫</div>
+                                  <p>Secure session expired. Generate a new token to interact with the API.</p>
+                                </div>
+                              )}
+                        </div>
+                      )}
+                      
+                      {currentUser?.role === 'guest' && (
+                        <div className="h-full bg-slate-100 dark:bg-slate-900/50 rounded-[2.5rem] p-10 border border-slate-200 dark:border-slate-800 border-dashed flex flex-col items-center justify-center text-center opacity-75">
+                           <div className="text-5xl mb-6 opacity-30 grayscale">🔒</div>
+                           <h3 className="text-lg font-bold text-slate-400 mb-2">Access Token Locked</h3>
+                           <p className="text-slate-500 text-xs font-medium max-w-xs">Writer access tokens are only available to approved contributors. Please request access to continue.</p>
+                        </div>
+                      )}
                    </div>
                 </div>
               )}

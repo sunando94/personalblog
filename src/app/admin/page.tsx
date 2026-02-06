@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Container from "@/app/_components/container";
 import Link from "next/link";
+
+import { useSearchParams } from "next/navigation";
 
 interface UserProfile {
   id: string;
@@ -13,7 +15,16 @@ interface UserProfile {
   lastLogin?: string;
 }
 
-export default function AdminPanel() {
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-xs">Loading Admin Panel...</div>}>
+      <AdminPanelContent />
+    </Suspense>
+  );
+}
+
+function AdminPanelContent() {
+  const searchParams = useSearchParams();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -23,7 +34,11 @@ export default function AdminPanel() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+    const querySearch = searchParams.get("search");
+    if (querySearch) {
+      setSearch(querySearch);
+    }
+  }, [searchParams]);
 
   const fetchUsers = async () => {
     try {

@@ -14,8 +14,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { topic, context } = await req.json();
-
+    const { topic, context, authorName, authorPicture, coverImage } = await req.json();
+    
     if (!topic) {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });
     }
@@ -24,6 +24,9 @@ export async function POST(req: NextRequest) {
     const result = await generatePost({
       topic,
       contextInput: context,
+      authorName,
+      authorPicture,
+      coverImage,
       releaseDateInput: "now",
       dryRun: true
     });
