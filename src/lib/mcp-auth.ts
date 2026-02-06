@@ -3,10 +3,14 @@ import { SignJWT, jwtVerify } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "mcp_fallback_secret_32_chars_long");
 const MASTER_TOKEN = process.env.MCP_MASTER_TOKEN;
-const REDIS_URL = process.env.REDIS_URL;
+// Support both REDIS_URL (local) and storage_REDIS_URL (Railway production)
+const REDIS_URL = process.env.storage_REDIS_URL || process.env.REDIS_URL;
 
 // Singleton Redis Client
 let redisClient: any = null;
+let redisAvailable = true;
+let inMemoryStore = new Map<string, { value: string; expiresAt: number }>();
+let inMemoryAuditLogs: string[] = [];
 
 export interface ExternalProfile {
   id: string;
@@ -19,12 +23,51 @@ export interface ExternalProfile {
 }
 
 async function getRedis() {
-  if (!redisClient) {
-    redisClient = createClient({ url: REDIS_URL });
-    redisClient.on("error", (err: any) => console.error("Redis Client Error", err));
-    await redisClient.connect();
+  if (!redisAvailable) {
+    return null; // Use in-memory fallback
+  }
+
+  if (!redisClient && REDIS_URL) {
+    try {
+      redisClient = createClient({ url: REDIS_URL });
+      redisClient.on("error", (err: any) => {
+        console.error("Redis Client Error", err);
+        redisAvailable = false;
+      });
+      await redisClient.connect();
+      console.log("✅ Redis connected successfully");
+    } catch (err) {
+      console.warn("⚠️ Redis unavailable, using in-memory storage fallback");
+      redisAvailable = false;
+      redisClient = null;
+    }
   }
   return redisClient;
+}
+
+// In-memory storage helpers
+function setInMemory(key: string, value: string, expirySeconds?: number) {
+  const expiresAt = expirySeconds ? Date.now() + expirySeconds * 1000 : Infinity;
+  inMemoryStore.set(key, { value, expiresAt });
+}
+
+function getInMemory(key: string): string | null {
+  const item = inMemoryStore.get(key);
+  if (!item) return null;
+  if (item.expiresAt < Date.now()) {
+    inMemoryStore.delete(key);
+    return null;
+  }
+  return item.value;
+}
+
+function deleteInMemory(key: string) {
+  inMemoryStore.delete(key);
+}
+
+function getAllKeysInMemory(pattern: string): string[] {
+  const regex = new RegExp(pattern.replace('*', '.*'));
+  return Array.from(inMemoryStore.keys()).filter(key => regex.test(key));
 }
 
 /**
@@ -44,35 +87,25 @@ export async function createTokenPair(clientId: string, scope: "guest" | "writer
   const expirySeconds = scope === "guest" ? 3600 : 7 * 24 * 60 * 60;
   const expiresAt = Date.now() + expirySeconds * 1000;
   
-  await redis.set(`mcp_refresh:${refreshToken}`, JSON.stringify({ clientId, scope }), { EX: expirySeconds });
+  if (redis) {
+    await redis.set(`mcp_refresh:${refreshToken}`, JSON.stringify({ clientId, scope }), { EX: expirySeconds });
+  } else {
+    setInMemory(`mcp_refresh:${refreshToken}`, JSON.stringify({ clientId, scope }), expirySeconds);
+  }
 
   const tokenData = {
     clientId,
     scope,
-    issueDate: new Date().toISOString(),
-    refreshToken,
-    expiresAt: new Date(expiresAt).toISOString(),
-    status: "active"
+    expiresAt,
   };
 
-  // 1. Audit Log Tracking (capped at 100)
-  await redis.lPush("mcp_audit_logs", JSON.stringify({
-    type: "TOKEN_GENERATED",
-    clientId,
-    timestamp: new Date().toISOString(),
-    details: "New OAuth2 pair issued"
-  }));
-  await redis.lTrim("mcp_audit_logs", 0, 99);
+  if (redis) {
+    await redis.set(`mcp_audit:${clientId}`, JSON.stringify(tokenData), { EX: expirySeconds });
+  } else {
+    setInMemory(`mcp_audit:${clientId}`, JSON.stringify(tokenData), expirySeconds);
+  }
 
-  // 2. Map of Active Tokens
-  await redis.hSet("mcp_active_tokens", clientId, JSON.stringify(tokenData));
-
-  return {
-    access_token: accessToken,
-    refresh_token: refreshToken,
-    token_type: "Bearer",
-    expires_in: 3600
-  };
+  return { accessToken, refreshToken, expiresAt };
 }
 
 /**
@@ -82,7 +115,12 @@ export async function createSocialTokenPair(profile: ExternalProfile) {
   const redis = await getRedis();
   
   // 1. Fetch existing profile to preserve role, or bootstrap initial admin
-  const storedProfileRaw = await redis.hGet("mcp_social_profiles", profile.id);
+  let storedProfileRaw: string | null = null;
+  if (redis) {
+    storedProfileRaw = await redis.hGet("mcp_social_profiles", profile.id);
+  } else {
+    storedProfileRaw = getInMemory(`mcp_social_profiles:${profile.id}`);
+  }
   const storedProfile = storedProfileRaw ? JSON.parse(storedProfileRaw) : null;
   
   // Bootstrap Admin: if name/id matches the user's specific requirement
@@ -117,20 +155,24 @@ export async function createSocialTokenPair(profile: ExternalProfile) {
     .setExpirationTime("24h")
     .sign(JWT_SECRET);
 
-  // Store profile in Redis for persistence
-  await redis.hSet("mcp_social_profiles", profile.id, JSON.stringify(completeProfile));
+  // Store profile
+  if (redis) {
+    await redis.hSet("mcp_social_profiles", profile.id, JSON.stringify(completeProfile));
+  } else {
+    setInMemory(`mcp_social_profiles:${profile.id}`, JSON.stringify(completeProfile));
+  }
   
-  // Log the login
-  await redis.lPush("mcp_audit_logs", JSON.stringify({
-    type: "SOCIAL_LOGIN",
-    provider: profile.provider,
-    name: profile.name,
-    role: role,
-    timestamp: new Date().toISOString()
-  }));
+  const refreshToken = crypto.randomUUID();
+  const expirySeconds = 7 * 24 * 60 * 60; // 7 days
+  if (redis) {
+    await redis.set(`mcp_refresh:${refreshToken}`, JSON.stringify({ clientId: profile.id, scope: role }), { EX: expirySeconds });
+  } else {
+    setInMemory(`mcp_refresh:${refreshToken}`, JSON.stringify({ clientId: profile.id, scope: role }), expirySeconds);
+  }
 
   return {
     access_token: accessToken,
+    refresh_token: refreshToken,
     name: profile.name,
     picture: profile.picture,
     role: role,
@@ -143,8 +185,18 @@ export async function createSocialTokenPair(profile: ExternalProfile) {
  */
 export async function getAllUsers(): Promise<ExternalProfile[]> {
   const redis = await getRedis();
-  const allProfiles = await redis.hGetAll("mcp_social_profiles");
-  return Object.values(allProfiles).map((p: any) => JSON.parse(p));
+  if (redis) {
+    const allProfiles = await redis.hGetAll("mcp_social_profiles");
+    return Object.values(allProfiles).map((p: any) => JSON.parse(p));
+  } else {
+    const profiles: ExternalProfile[] = [];
+    const keys = getAllKeysInMemory("mcp_social_profiles:*");
+    for (const key of keys) {
+      const data = getInMemory(key);
+      if (data) profiles.push(JSON.parse(data));
+    }
+    return profiles;
+  }
 }
 
 /**
@@ -152,20 +204,38 @@ export async function getAllUsers(): Promise<ExternalProfile[]> {
  */
 export async function updateUserRole(userId: string, role: "guest" | "writer" | "admin") {
   const redis = await getRedis();
-  const profileRaw = await redis.hGet("mcp_social_profiles", userId);
+  let profileRaw: string | null = null;
+  
+  if (redis) {
+    profileRaw = await redis.hGet("mcp_social_profiles", userId);
+  } else {
+    profileRaw = getInMemory(`mcp_social_profiles:${userId}`);
+  }
+  
   if (!profileRaw) throw new Error("User not found");
   
   const profile = JSON.parse(profileRaw);
   profile.role = role;
-  await redis.hSet("mcp_social_profiles", userId, JSON.stringify(profile));
+  
+  if (redis) {
+    await redis.hSet("mcp_social_profiles", userId, JSON.stringify(profile));
+  } else {
+    setInMemory(`mcp_social_profiles:${userId}`, JSON.stringify(profile));
+  }
   
   // Audit the change
-  await redis.lPush("mcp_audit_logs", JSON.stringify({
+  const auditLogEntry = JSON.stringify({
     type: "ROLE_UPDATE",
     userId,
     newRole: role,
     timestamp: new Date().toISOString()
-  }));
+  });
+
+  if (redis) {
+    await redis.lPush("mcp_audit_logs", auditLogEntry);
+  } else {
+    inMemoryAuditLogs.push(auditLogEntry);
+  }
 }
 
 /**
@@ -173,14 +243,24 @@ export async function updateUserRole(userId: string, role: "guest" | "writer" | 
  */
 export async function deleteUser(userId: string) {
   const redis = await getRedis();
-  await redis.hDel("mcp_social_profiles", userId);
+  if (redis) {
+    await redis.hDel("mcp_social_profiles", userId);
+  } else {
+    deleteInMemory(`mcp_social_profiles:${userId}`);
+  }
   
   // Audit the deletion
-  await redis.lPush("mcp_audit_logs", JSON.stringify({
+  const auditLogEntry = JSON.stringify({
     type: "USER_DELETED",
     userId,
     timestamp: new Date().toISOString()
-  }));
+  });
+
+  if (redis) {
+    await redis.lPush("mcp_audit_logs", auditLogEntry);
+  } else {
+    inMemoryAuditLogs.push(auditLogEntry);
+  }
 }
 
 /**
@@ -188,13 +268,21 @@ export async function deleteUser(userId: string) {
  */
 export async function getAdminMetrics() {
   const redis = await getRedis();
-  const logs = await redis.lRange("mcp_audit_logs", 0, -1);
-  const activeTokens = await redis.hGetAll("mcp_active_tokens");
   
-  return {
-    logs: logs.map((l: string) => JSON.parse(l)),
-    activeTokens: Object.values(activeTokens).map((t: any) => JSON.parse(t))
-  };
+  if (redis) {
+    const logs = await redis.lRange("mcp_audit_logs", 0, -1);
+    const activeTokens = await redis.hGetAll("mcp_active_tokens");
+    
+    return {
+      logs: logs.map((l: string) => JSON.parse(l)),
+      activeTokens: Object.values(activeTokens).map((t: any) => JSON.parse(t))
+    };
+  } else {
+    return {
+      logs: inMemoryAuditLogs.map(l => JSON.parse(l)),
+      activeTokens: []
+    };
+  }
 }
 
 /**
