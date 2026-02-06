@@ -222,6 +222,12 @@ export const mcpDocsHtml = (origin: string) => `<!DOCTYPE html>
             <div class="controls">
                 <h2 class="section-title">Configure Request</h2>
                 <div class="card">
+                    <div class="input-group">
+                        <label>Auth Token *</label>
+                        <input type="password" id="mcp-token" placeholder="Bearer Token">
+                        <p style="font-size: 11px; margin-top: 4px;">Don't have one? <a href="/mcp/request" style="color: var(--accent); text-decoration: none;">Request access</a></p>
+                    </div>
+
                     <label>Select Tool</label>
                     <select id="toolSelect" class="tool-select">
                         <option value="generate_blog_post">generate_blog_post</option>
@@ -237,13 +243,6 @@ export const mcpDocsHtml = (origin: string) => `<!DOCTYPE html>
                         <div class="input-group">
                             <label>Context (URL/Text)</label>
                             <textarea id="gen-context" rows="3" placeholder="Additional source material..."></textarea>
-                        </div>
-                        <div class="input-group">
-                            <label>Mode</label>
-                            <select id="gen-mode">
-                                <option value="prod">Production</option>
-                                <option value="draft">Draft</option>
-                            </select>
                         </div>
                     </div>
 
@@ -283,6 +282,11 @@ export const mcpDocsHtml = (origin: string) => `<!DOCTYPE html>
         const toolSelect = document.getElementById('toolSelect');
         const executeBtn = document.getElementById('executeBtn');
         const output = document.getElementById('output');
+        const tokenInput = document.getElementById('mcp-token');
+
+        // Load token from localStorage if exists
+        const savedToken = localStorage.getItem('mcp_token');
+        if (savedToken) tokenInput.value = savedToken;
 
         toolSelect.addEventListener('change', (e) => {
             const sections = document.querySelectorAll('.params-section');
@@ -292,14 +296,23 @@ export const mcpDocsHtml = (origin: string) => `<!DOCTYPE html>
 
         executeBtn.addEventListener('click', async () => {
             const tool = toolSelect.value;
+            const token = tokenInput.value;
+
+            if (!token) {
+                output.innerHTML = '<span style="color:#f87171">Error: Bearer token is required for all MCP operations.</span>';
+                return;
+            }
+
+            // Save for convenience
+            localStorage.setItem('mcp_token', token);
+
             output.innerText = 'Initializing MCP handshake...\\n';
             
             let args = {};
             if (tool === 'generate_blog_post') {
                 args = {
                     topic: document.getElementById('gen-topic').value,
-                    additional_context: document.getElementById('gen-context').value,
-                    mode: document.getElementById('gen-mode').value
+                    additional_context: document.getElementById('gen-context').value
                 };
             } else if (tool === 'read_post') {
                 args = { slug: document.getElementById('read-slug').value };
@@ -312,7 +325,8 @@ export const mcpDocsHtml = (origin: string) => `<!DOCTYPE html>
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json, text/event-stream'
+                        'Accept': 'application/json, text/event-stream',
+                        'Authorization': \`Bearer \${token}\`
                     },
                     body: JSON.stringify({
                         jsonrpc: '2.0',
@@ -324,6 +338,11 @@ export const mcpDocsHtml = (origin: string) => `<!DOCTYPE html>
                         }
                     })
                 });
+
+                if (response.status === 401) {
+                    output.innerHTML = '<span style="color:#f87171">Unauthorized: Invalid token provided. Request a new token at /mcp/request</span>';
+                    return;
+                }
 
                 const data = await response.json();
                 

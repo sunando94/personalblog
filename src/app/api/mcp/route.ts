@@ -3,19 +3,33 @@ import { NextRequest } from "next/server";
 // @ts-ignore
 import { createServer } from "../../../../mcp/server.mjs";
 import { mcpDocsHtml } from "@/lib/mcp-docs";
+import { isValidToken } from "@/lib/mcp-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  // Check if the request is from a browser for documentation
   const acceptHeader = request.headers.get("accept");
+  const authHeader = request.headers.get("authorization");
+
+  // 1. Documentation access (No Auth required for the landing page itself)
   if (acceptHeader?.includes("text/html")) {
     return new Response(mcpDocsHtml(request.nextUrl.origin), {
       headers: { "Content-Type": "text/html" },
     });
   }
 
-  // MCP SSE connection requirements
+  // 2. MCP Connection access (Auth Required)
+  const isAuthorized = await isValidToken(authHeader);
+  if (!isAuthorized) {
+    return new Response(JSON.stringify({ 
+      error: "UNAUTHORIZED", 
+      message: "Please provide a valid Bearer token. Request one at /mcp/request" 
+    }), { 
+      status: 401,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
   const transport = new WebStandardStreamableHTTPServerTransport({
     enableJsonResponse: true,
   });
@@ -24,7 +38,6 @@ export async function GET(request: NextRequest) {
   try {
     await server.connect(transport);
     
-    // Create a modified request with guaranteed Accept headers
     const url = new URL(request.url);
     const headers = new Headers(request.headers);
     headers.set("Accept", "application/json, text/event-stream");
@@ -44,6 +57,20 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+
+  // Auth Required for all POST calls (Tool Executions)
+  const isAuthorized = await isValidToken(authHeader);
+  if (!isAuthorized) {
+    return new Response(JSON.stringify({ 
+      error: "UNAUTHORIZED", 
+      message: "Invalid or missing token." 
+    }), { 
+      status: 401,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
   const transport = new WebStandardStreamableHTTPServerTransport({
     enableJsonResponse: true,
   });

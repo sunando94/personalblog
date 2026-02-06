@@ -23,6 +23,22 @@ export function createServer() {
     }
   );
 
+  let projectRoot = process.cwd();
+  if (projectRoot === "/") {
+    projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  }
+
+  /**
+   * Helper to fill prompt templates from mcp/prompts/
+   */
+  const fillPrompt = async (name, data) => {
+    let template = await fs.readFile(path.join(projectRoot, `mcp/prompts/${name}.md`), "utf-8");
+    for (const [key, value] of Object.entries(data)) {
+      template = template.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    }
+    return template;
+  };
+
   /**
    * Tool Definitions
    */
@@ -31,14 +47,13 @@ export function createServer() {
       tools: [
         {
           name: "generate_blog_post",
-          description: "Triggers the multi-agent pipeline to generate a new blog post.",
+          description: "Triggers the multi-agent pipeline to generate a new blog post. Automatically falls back to agentic mode on rate limits.",
           inputSchema: {
             type: "object",
             properties: {
               topic: { type: "string", description: "The topic of the blog post." },
               additional_context: { type: "string", description: "URL, text, or file context." },
               release_date: { type: "string", description: "YYYY-MM-DD or 'now'." },
-              mode: { type: "string", enum: ["prod", "draft"], default: "prod" },
             },
             required: ["topic"],
           },
@@ -73,28 +88,42 @@ export function createServer() {
       if (name === "generate_blog_post") {
         console.log(`[MCP] Starting blog generation for topic: ${args.topic}`);
         const startTime = Date.now();
-        await generatePost({
-          topic: args.topic,
-          contextInput: args.additional_context,
-          releaseDateInput: args.release_date || "now",
-          isDraft: args.mode === "draft",
-        });
-        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`[MCP] Blog generation completed in ${duration}s`);
         
-        return {
-          content: [{ type: "text", text: `Success! Blog post generated for "${args.topic}" in ${duration}s.` }],
-        };
-      }
-
-      let projectRoot = process.cwd();
-      if (projectRoot === "/") {
-        projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+        try {
+          const result = await generatePost({
+            topic: args.topic,
+            contextInput: args.additional_context,
+            releaseDateInput: args.release_date || "now",
+            mcpMode: true
+          });
+          const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+          const branchSuffix = result.github?.branch ? ` on branch \`${result.github.branch}\`` : '';
+          const prSuffix = result.github?.prUrl ? `\n\nReview & Merge here: ${result.github.prUrl}` : '';
+          return {
+            content: [{ type: "text", text: `Success! Blog post generated for "${args.topic}" in ${duration}s${branchSuffix}.${prSuffix}` }],
+          };
+        } catch (genError) {
+          if (genError.message?.includes("429") || genError.message?.includes("limit reached")) {
+            console.warn(`[MCP] Gemini Rate Limit reached. Prepping Agentic Fallback...`);
+            
+            const guidelines = await fs.readFile(path.join(projectRoot, ".agent/docs/blog_post_guidelines.md"), "utf-8");
+            const promptTemplate = await fs.readFile(path.join(projectRoot, "mcp/prompts/unified_post.md"), "utf-8");
+            
+            const fallbackMsg = await fillPrompt('agentic_fallback', {
+              topic: args.topic,
+              guidelines,
+              promptTemplate,
+              context: args.additional_context || "None provided."
+            });
+            
+            return { content: [{ type: "text", text: fallbackMsg }] };
+          }
+          throw genError;
+        }
       }
 
       if (name === "list_posts") {
         const postsDir = path.join(projectRoot, "_posts");
-        console.error(`[MCP] Listing posts in: ${postsDir}`);
         const files = await fs.readdir(postsDir);
         return {
           content: [{ type: "text", text: files.filter(f => f.endsWith(".md")).join("\n") }],
@@ -104,7 +133,6 @@ export function createServer() {
       if (name === "read_post") {
         const fileName = String(args.slug).endsWith(".md") ? String(args.slug) : `${args.slug}.md`;
         const filePath = path.join(projectRoot, "_posts", fileName);
-        console.error(`[MCP] Reading post: ${filePath}`);
         const content = await fs.readFile(filePath, "utf-8");
         return {
           content: [{ type: "text", text: content }],

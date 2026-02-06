@@ -1,30 +1,24 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const returnTo = searchParams.get("returnTo") || "/";
+export async function GET(req: NextRequest) {
+  const clientId = process.env.LINKEDIN_CLIENT_ID;
+  const redirectUri = `${new URL(req.url).origin}/api/auth/linkedin/callback`;
+  
+  // If no LinkedIn credentials, show a mock login for demo purposes
+  if (!clientId) {
+    const mockProfile = {
+      id: "mock-li-admin",
+      name: "Sunando Bhattacharya",
+      picture: "https://ui-avatars.com/api/?name=Sunando+Bhattacharya&background=0077b5&color=fff",
+      provider: "linkedin"
+    };
+    
+    // In a real app, this would be the LinkedIn Auth URL. 
+    // For demo, we redirect directly to callback with 'mock=true'
+    return NextResponse.redirect(`${redirectUri}?mock=true&name=${encodeURIComponent(mockProfile.name)}&id=${mockProfile.id}`);
+  }
 
-    const clientId = process.env.LINKEDIN_CLIENT_ID;
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const redirectUri = `${siteUrl}/api/auth/linkedin/callback`;
+  const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid%20profile%20email`;
 
-    if (!clientId || clientId === "your-linkedin-client-id") {
-        return NextResponse.json(
-            { error: "Configuration Error: LINKEDIN_CLIENT_ID not set. Please update .env.local with your real credentials." },
-            { status: 500 }
-        );
-    }
-
-    // Generate a random state for security (in a real app, store this in a session/cookie and verify it)
-    // For this simple implementation, we'll just encode the returnTo path
-    const state = encodeURIComponent(returnTo);
-
-    // Scope required for sharing on behalf of a member
-    // w_member_social: Create, modify, and delete posts, comments, and likes on behalf of the member.
-    // profile: To get basic profile info (optional but good to have)
-    const scope = "w_member_social profile openid email";
-
-    const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scope)}`;
-
-    return NextResponse.redirect(authUrl);
+  return NextResponse.redirect(linkedinAuthUrl);
 }

@@ -1,110 +1,92 @@
-# ✍️ Personal Blog - AI-Enhanced & Statically Generated
+# ✍️ Sudo Make Me Sandwich - AI-Powered Blog Engine
 
-A modern, high-performance personal blog built with **Next.js 15**, **TypeScript**, and **Tailwind CSS**. This blog leverages static generation for speed while incorporating dynamic AI features for a personalized touch.
+A modern, high-performance personal blog built with **Next.js 15**, **TypeScript**, and **Tailwind CSS**. This project isn't just a blog; it's a cross-platform content engine integrated with the **Model Context Protocol (MCP)** and **Local Browser-Side AI**.
+
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    subgraph "Content Architecture"
+        UI[User Interface / Next.js]
+        MCP_Client[MCP Clients: Cursor, Claude Desktop]
+        API[API Routes / MCP Server]
+        Pipeline[Unified Generation Pipeline]
+        LocalGPU[Browser AI Lab - WebGPU/WebLLM]
+        Storage[Repository: _posts/]
+
+        UI --> API
+        UI --> LocalGPU
+        MCP_Client --> API
+        
+        API --> Pipeline
+        Pipeline -->|1. Direct Write| Storage
+        Pipeline -->|2. EROFS Fallback| GitHubAPI[GitHub REST API]
+        Pipeline -->|3. 429 Rate Limit| AgentFallback[Agentic Manual Fallback]
+        
+        GitHubAPI --> Storage
+        LocalGPU -->|Manual Export| Storage
+    end
+
+    subgraph "MCP Connectivity"
+        Stdio[Local: Stdio Transport]
+        HTTP[Remote: Streamable HTTP]
+        Stdio --> API
+        HTTP --> API
+    end
+```
 
 ## ✨ Key Features
 
-- **🚀 Performance-First**: Built with Next.js App Router and Static Site Generation (SSG) for near-instant page loads.
-- **🤖 AI Title Generation**: Dynamically generates catchy headers and intros using Gemini, OpenAI, or Anthropic (with 25-hour caching).
-- **🔗 LinkedIn Integration**: Automatically fetches and displays professional profile data.
-- **📝 Markdown-Powered**: Write posts in standard Markdown with support for:
-  - Syntax highlighting via `rehype-highlight`.
-  - GitHub Flavored Markdown (GFM).
-  - Mermaid diagrams for technical illustrations.
-- **🌓 Dark Mode**: Fully responsive design with seamless dark mode support.
-- **📱 List View**: Dedicated horizontal list view for browsing all posts efficiently.
-
-## 🛠 Tech Stack
-
-- **Framework**: [Next.js](https://nextjs.org/) (App Router)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Content**: Markdown (processed with `remark`, `rehype`, and `gray-matter`)
-- **Icons**: [Heroicons](https://heroicons.com/)
+- **🤖 Model Context Protocol (MCP)**: Access your blog's functions (list posts, read content, generate articles) directly from any MCP client like **Cursor** or **Claude Desktop**.
+- **🚀 Hybrid AI Generation**:
+  - **Primary**: High-speed **Gemini 3 Flash** cloud pipeline.
+  - **Self-Healing**: Automatically falls back to **Agentic Instructions** if API limits (429) are hit.
+  - **Local Power**: **Browser AI Lab** allows full post generation on your own GPU using **WebGPU + Llama 3.2**.
+- **🔗 Automated Persistence**: Generation pipeline intelligently switches to **GitHub API** commits when running in read-only environments like Vercel.
+- **📝 Markdown-Powered**: Full GFM support, syntax highlighting, and **Mermaid** diagrams.
+- **🌓 Dark Mode**: Sleek, premium aesthetic with deep dark mode support and modern animations.
 
 ## 🚀 Getting Started
 
-### 1. Clone & Install
-
+### 1. Installation
 ```bash
-git clone <repository-url>
+git clone https://github.com/sunando94/personalblog.git
 cd personalblog
 npm install
 ```
 
-### 2. Environment Variables
-
-Copy `.env.example` to `.env.local` and configure your API keys:
-
-```bash
-cp .env.example .env.local
-```
-
-Required variables:
-- `NEXT_PUBLIC_SITE_URL`: Your blog's URL (e.g., `http://localhost:3000`).
-- (Optional) `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for AI title generation.
+### 2. Configure Environment
+Copy `.env.example` to `.env.local` and add:
+- `GEMINI_API_KEY`: For the primary generation pipeline.
+- `GITHUB_TOKEN`: (Optional) Personal Access Token for Vercel-to-GitHub persistence.
 
 ### 3. Run Locally
-
 ```bash
+# Start the web interface
 npm run dev
+
+# Start the Local MCP Runner (Stdio)
+npm run mcp
 ```
 
-The blog will be available at [http://localhost:3000](http://localhost:3000).
+## 🛠️ MCP Integration
 
-## 📁 Project Structure
+To connect your local AI (Cursor/Claude) to this blog:
+1. Ensure the server is configured in your MCP settings.
+2. Use the `generate_blog_post` tool to write high-quality technical content following your project's 1000-line "Zero to Hero" guidelines.
 
-```text
-├── _posts/           # Blog posts in Markdown (.md)
-├── public/           # Static assets (images, favicons)
-├── src/
-│   ├── app/          # Next.js App Router (pages and API routes)
-│   ├── _components/  # Reusable UI components
-│   ├── lib/          # Shared utility logic (markdown, API clients)
-│   ├── interfaces/   # TypeScript type definitions
-│   └── styles/       # Global CSS and Tailwind styles
-├── scripts/          # Helper scripts for automation
-└── .agent/           # AI Assistant workflows and documentation
-```
+## 📁 System Design
 
-## 🛠 Automation Scripts
-
-- **Fetch LinkedIn Picture**: You can automatically update your profile picture from LinkedIn using:
-  ```bash
-  node scripts/fetch-linkedin-picture.js
-  ```
-  *(Requires `LINKPREVIEW_API_KEY` in `.env.local` for best results, or fallback to public scraping).*
-
-## ✍️ Writing Posts
-
-New posts are stored in the `/_posts` directory. Each file requires a specific frontmatter format:
-
-```markdown
----
-title: "Your Post Title"
-excerpt: "A brief summary of your post"
-coverImage: "/assets/blog/your-image.jpg"
-date: "2024-03-20T05:35:07.322Z"
-author:
-  name: "Your Name"
-  picture: "/assets/blog/authors/your-pic.jpg"
-ogImage:
-  url: "/assets/blog/your-image.jpg"
----
-Your markdown content here...
-```
-
-> **Tip**: If you're using Antigravity, you can use the `/create-post` workflow to quickly scaffold a new post.
+- **`/scripts`**: The heart of the generation pipeline. Includes robust path resolution and cloud-to-agent fallbacks.
+- **`/mcp`**: Server definition, local runners, and centralized prompt templates.
+- **`/src/app/browser-writer`**: The WebGPU-powered local AI lab.
+- **`.agent/docs`**: Your project's core guidelines that the AI strictly follows.
 
 ## 🚢 Deployment
 
-The easiest way to deploy is using [Vercel](https://vercel.com):
-
-1. Push your code to GitHub.
-2. Import the project in Vercel.
-3. Configure your Environment Variables.
-4. Deploy!
+Optimized for **Vercel**. 
+> **Note**: For the AI generation to work on Vercel, ensure you've added the `GITHUB_TOKEN` environment variable so the script can "push" new posts back to your repository.
 
 ---
 
-Built with ❤️ by [Sunando](https://github.com/sunando94)
+Built with ❤️ and 🤖 by [Sunando](https://github.com/sunando94)
