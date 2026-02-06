@@ -8,6 +8,7 @@ import {
 import { generatePost } from "../scripts/generate-post.mjs";
 import fs from "fs/promises";
 import path from "path";
+import { fileURLToPath } from 'url';
 
 export function createServer() {
   const server = new Server(
@@ -86,9 +87,13 @@ export function createServer() {
         };
       }
 
+      let projectRoot = process.cwd();
+      if (projectRoot === "/") {
+        projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+      }
+
       if (name === "list_posts") {
-        // Use an absolute path or relative to the script location for reliability
-        const postsDir = path.join(process.cwd(), "_posts");
+        const postsDir = path.join(projectRoot, "_posts");
         console.error(`[MCP] Listing posts in: ${postsDir}`);
         const files = await fs.readdir(postsDir);
         return {
@@ -98,7 +103,7 @@ export function createServer() {
  
       if (name === "read_post") {
         const fileName = String(args.slug).endsWith(".md") ? String(args.slug) : `${args.slug}.md`;
-        const filePath = path.join(process.cwd(), "_posts", fileName);
+        const filePath = path.join(projectRoot, "_posts", fileName);
         console.error(`[MCP] Reading post: ${filePath}`);
         const content = await fs.readFile(filePath, "utf-8");
         return {
