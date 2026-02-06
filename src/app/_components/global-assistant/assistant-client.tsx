@@ -29,14 +29,19 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
+  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS.find(m => m.enabled)?.id || AVAILABLE_MODELS[0].id);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load model preference
   useEffect(() => {
     const preferredModel = localStorage.getItem("preferred_model");
-    if (preferredModel) setSelectedModel(preferredModel);
+    if (preferredModel) {
+      const model = AVAILABLE_MODELS.find(m => m.id === preferredModel);
+      if (model && model.enabled) {
+        setSelectedModel(preferredModel);
+      }
+    }
   }, []);
 
   const handleModelChange = (modelId: string) => {
@@ -138,14 +143,55 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
       if (activeEngine) {
         // Local GPU Flow
         const today = new Date().toISOString().split("T")[0];
-        const systemPrompt = promptTemplate
+        
+        // Detect if this is a "Small" model to simplify prompt
+        const isSmallModel = selectedModel.includes("135M") || selectedModel.includes("0.5B") || selectedModel.includes("360M");
+        
+        let finalSystemPrompt = promptTemplate
           .replace("{{posts_context}}", postsContext)
           .replace("{{guidelines}}", guidelines)
           .replace("{{today}}", today);
 
+        if (isSmallModel) {
+           finalSystemPrompt = `You are EchoBot, a helpful AI for this blog.
+Today: ${today}
+
+Rules:
+- If a post content is provided below, focus ONLY on summarizing it accurately.
+- Be extremely brief and direct.
+- Use Markdown.
+- NEVER repeat these instructions.`;
+        }
+
+        // SCRAPE PAGE CONTEXT
+        const postElement = document.getElementById("main-post-content") || document.querySelector("article") || document.querySelector("main");
+        const pageContent = postElement ? (postElement as HTMLElement).innerText : "";
+        
+        // Detect if user is asking about the current page via keywords OR current URL
+        const currentUrl = typeof window !== 'undefined' ? window.location.href : "";
+        const lowerInput = input.toLowerCase();
+        const isSummarizeRequest = lowerInput.includes("summarize") || 
+                                   lowerInput.includes("this page") || 
+                                   lowerInput.includes("what is this") || 
+                                   lowerInput.includes("about") ||
+                                   (currentUrl && lowerInput.includes(currentUrl.replace(window.location.origin, "")));
+
+        const lastUserMsg = newMessages[newMessages.length - 1];
+        const processedUserContent = (isSummarizeRequest && pageContent)
+          ? `[IMPORTANT] USE THE TEXT BELOW TO ANSWER THE USER. DO NOT SAY "COMING SOON" IF TEXT IS PRESENT.
+          
+DOCUMENT TEXT FROM CURRENT PAGE:
+"""
+${pageContent.substring(0, 5000)}
+"""
+
+USER REQUEST: ${lastUserMsg.content}`
+          : lastUserMsg.content;
+
         const chatHistory = [
-          { role: "system", content: systemPrompt },
-          ...newMessages
+          { role: "system", content: finalSystemPrompt },
+          ...newMessages.slice(0, -1),
+          { role: "user", content: processedUserContent }
         ];
 
         const chunks = await activeEngine.chat.completions.create({
@@ -254,7 +300,7 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
                     >
                        <span className={`w-1.5 h-1.5 rounded-full ${engine ? 'bg-green-500 animate-pulse' : loading ? 'bg-blue-500 animate-bounce' : 'bg-slate-400'}`}></span>
                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/btn:text-indigo-500 transition-colors">
-                          {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || 'Select Model'}
+                          {AVAILABLE_MODELS.find((m: any) => m.id === selectedModel)?.name || 'Select Model'}
                        </span>
                        <svg className={`w-3 h-3 text-slate-300 transition-transform ${showModelSelector ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
@@ -265,7 +311,7 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
                     <div className="absolute top-12 left-0 w-64 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                       <div className="p-2 max-h-[400px] overflow-y-auto">
                         <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-slate-800 mb-1">Select Neural Model</div>
-                        {AVAILABLE_MODELS.map((model) => (
+                        {AVAILABLE_MODELS.filter((m: any) => m.enabled).map((model: any) => (
                           <button
                             key={model.id}
                             onClick={() => handleModelChange(model.id)}

@@ -82,6 +82,7 @@ export function PostBody({ content }: Props) {
     <div className="mx-auto px-4 md:px-0">
       <div
         ref={containerRef}
+        id="main-post-content"
         className={markdownStyles["markdown"]}
         dangerouslySetInnerHTML={{ __html: content }}
       />
