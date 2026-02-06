@@ -49,6 +49,13 @@ const Header = () => {
           >
             All Posts
           </Link>
+          <span className="text-gray-300 dark:text-gray-600">•</span>
+          <Link
+            href="/browser-writer"
+            className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 flex items-center gap-1"
+          >
+            Browser AI <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 font-bold uppercase tracking-tighter">Lab</span>
+          </Link>
           {DEFAULT_AUTHOR.linkedin && (
             <>
               <span className="text-gray-300 dark:text-gray-600">•</span>
