@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import dotenv from "dotenv";
 import matter from "gray-matter";
+import { fileURLToPath } from 'url';
 
 // dotenv.config() removed to prevent stdout noise during MCP initialization
 
@@ -57,10 +58,15 @@ export async function generatePost(options = {}) {
     return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
   };
 
-  const __dirname = path.dirname(new URL(import.meta.url).pathname);
-  const projectRoot = path.resolve(__dirname, "..");
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  let projectRoot = process.cwd();
+  if (projectRoot === "/") {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    projectRoot = path.resolve(__dirname, "..");
+  }
   const postsDir = path.join(projectRoot, "_posts");
-  console.log(`[Pipeline] Targeted posts directory: ${postsDir}`);
   await fs.mkdir(postsDir, { recursive: true });
   
   const existingFiles = await fs.readdir(postsDir);
