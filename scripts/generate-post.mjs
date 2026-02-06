@@ -57,7 +57,10 @@ export async function generatePost(options = {}) {
     return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
   };
 
-  const postsDir = path.join(process.cwd(), "_posts");
+  const __dirname = path.dirname(new URL(import.meta.url).pathname);
+  const projectRoot = path.resolve(__dirname, "..");
+  const postsDir = path.join(projectRoot, "_posts");
+  console.log(`[Pipeline] Targeted posts directory: ${postsDir}`);
   await fs.mkdir(postsDir, { recursive: true });
   
   const existingFiles = await fs.readdir(postsDir);
@@ -111,7 +114,7 @@ export async function generatePost(options = {}) {
         resolvedContext = contextInput;
       }
     } else {
-      const fullPath = path.join(process.cwd(), contextInput);
+      const fullPath = path.join(projectRoot, contextInput);
       try {
         const stats = await fs.stat(fullPath);
         if (stats.isFile()) {
@@ -127,11 +130,11 @@ export async function generatePost(options = {}) {
   }
 
   // Read Guidelines
-  const guidelines = await fs.readFile(path.join(process.cwd(), ".agent/docs/blog_post_guidelines.md"), "utf-8");
+  const guidelines = await fs.readFile(path.join(projectRoot, ".agent/docs/blog_post_guidelines.md"), "utf-8");
 
   // Helper to load and fill prompt templates
   const loadPrompt = async (name, data) => {
-    let template = await fs.readFile(path.join(process.cwd(), `mcp/prompts/${name}.md`), "utf-8");
+    let template = await fs.readFile(path.join(projectRoot, `mcp/prompts/${name}.md`), "utf-8");
     for (const [key, value] of Object.entries(data)) {
       template = template.replace(new RegExp(`{{${key}}}`, 'g'), value);
     }
