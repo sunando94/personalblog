@@ -12,6 +12,7 @@ interface UserProfile {
   picture?: string;
   provider: string;
   role: "guest" | "writer" | "admin";
+  pendingRole?: "guest" | "writer" | "admin";
   lastLogin?: string;
 }
 
@@ -56,7 +57,7 @@ function AdminPanelContent() {
     }
   };
 
-  const changeRole = async (userId: string, newRole: string) => {
+  const changeRole = async (userId: string, newRole: string, action?: string) => {
     try {
       const token = localStorage.getItem("mcp_token");
       const res = await fetch("/api/admin/users", {
@@ -65,13 +66,42 @@ function AdminPanelContent() {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ userId, role: newRole })
+        body: JSON.stringify({ userId, role: newRole, action })
       });
-      if (!res.ok) throw new Error("Failed to update role");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to update role");
+      }
       
-      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole as any } : u));
+      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole as any, pendingRole: undefined } : u));
     } catch (err: any) {
-      alert(err.message);
+      alert(`⚠️ ${err.message}`);
+      // Refresh list to sync state
+      fetchUsers();
+    }
+  };
+
+  const rejectRole = async (userId: string) => {
+    try {
+      const token = localStorage.getItem("mcp_token");
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ userId, action: "reject" })
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to reject request");
+      }
+      
+      setUsers(users.map(u => u.id === userId ? { ...u, pendingRole: undefined } : u));
+    } catch (err: any) {
+      alert(`⚠️ ${err.message}`);
+      // Refresh list to sync state
+      fetchUsers();
     }
   };
 
@@ -94,6 +124,25 @@ function AdminPanelContent() {
     } catch (err: any) {
       alert(err.message);
       setConfirmDelete(null);
+    }
+  };
+
+  const syncCache = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("mcp_token");
+      const res = await fetch("/api/admin/sync", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Sync failed");
+      const data = await res.json();
+      alert(`✅ ${data.message}\nUsers Synced: ${data.usersSynced}`);
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -133,17 +182,48 @@ function AdminPanelContent() {
                 <p className="text-slate-500 font-medium">Manage user privileges and system health.</p>
               </div>
 
-              <div className="relative">
-                <input 
-                  type="text" 
-                  placeholder="Search identity..." 
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-12 pr-6 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all w-full md:w-80 shadow-sm font-bold text-sm"
-                />
-                <svg className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={syncCache}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                  {loading ? 'Syncing...' : 'Sync Cache'}
+                </button>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="Search identity..." 
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-12 pr-6 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all w-full md:w-80 shadow-sm font-bold text-sm"
+                  />
+                  <svg className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
               </div>
             </div>
+
+            {/* Pending Requests Alert - High Visibility */}
+            {!loading && users.some(u => u.pendingRole) && (
+              <div className="mb-10 p-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-[2rem] flex items-center justify-between animate-in zoom-in-95 duration-500">
+                <div className="flex items-center gap-4">
+                   <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                   </div>
+                   <div>
+                      <h3 className="text-lg font-black text-amber-900 dark:text-amber-500">Pending Approvals</h3>
+                      <p className="text-amber-700/60 dark:text-amber-500/60 text-sm font-medium">There are {users.filter(u => u.pendingRole).length} user(s) waiting for role upgrades.</p>
+                   </div>
+                </div>
+                <button 
+                  onClick={() => setSearch(users.find(u => u.pendingRole)?.id || "")}
+                  className="px-6 py-2 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
+                >
+                  View First
+                </button>
+              </div>
+            )}
 
             {/* System Connectivity Card */}
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-xl mb-10 overflow-hidden relative">
@@ -230,13 +310,34 @@ function AdminPanelContent() {
                              )}
                           </td>
                           <td className="px-8 py-6">
-                             <button 
-                               onClick={() => handleRemoveClick(user)}
-                               className="p-2 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all opacity-0 group-hover:opacity-100"
-                               title="Remove User"
-                             >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                             </button>
+                             <div className="flex items-center gap-3">
+                                {user.pendingRole && (
+                                   <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-500">
+                                      <div className="px-3 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                         <p className="text-[8px] font-black uppercase text-amber-600 tracking-widest">Wants {user.pendingRole}</p>
+                                      </div>
+                                      <button 
+                                        onClick={() => changeRole(user.id, user.pendingRole!, "approve")}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-green-500/20"
+                                      >
+                                         Approve
+                                      </button>
+                                      <button 
+                                        onClick={() => rejectRole(user.id)}
+                                        className="px-4 py-2 border border-red-500/30 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 active:scale-95 transition-all"
+                                      >
+                                         Reject
+                                      </button>
+                                   </div>
+                                )}
+                                <button 
+                                  onClick={() => handleRemoveClick(user)}
+                                  className={`p-2 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all ${user.pendingRole ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                  title="Remove User"
+                                >
+                                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                             </div>
                           </td>
                         </tr>
                       ))}

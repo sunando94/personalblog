@@ -1,7 +1,6 @@
 import Container from "@/app/_components/container";
 import { HeroPost } from "@/app/_components/hero-post";
 import { Intro } from "@/app/_components/intro";
-import { WriterSection } from "@/app/_components/writer-section";
 import { RecentPosts } from "@/app/_components/recent-posts";
 import { getAllPosts } from "@/lib/api";
 
@@ -15,7 +14,6 @@ export default function Index() {
     <main>
       <Container>
         <Intro />
-        <WriterSection />
         {heroPost && (
           <HeroPost
             title={heroPost.title}

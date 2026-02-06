@@ -9,32 +9,7 @@ interface StorageEstimate {
   quota?: number;
 }
 
-const AVAILABLE_MODELS = [
-  {
-    id: "Llama-3.2-1B-Instruct-q4f32_1-MLC",
-    name: "Llama 3.2 1B (Fast)",
-    size: "~600MB",
-    description: "Lightweight model, great for quick responses"
-  },
-  {
-    id: "Llama-3.2-3B-Instruct-q4f32_1-MLC",
-    name: "Llama 3.2 3B (Balanced)",
-    size: "~1.8GB",
-    description: "Best balance of speed and quality"
-  },
-  {
-    id: "Phi-3.5-mini-instruct-q4f16_1-MLC",
-    name: "Phi 3.5 Mini (Efficient)",
-    size: "~2.3GB",
-    description: "Microsoft's efficient reasoning model"
-  },
-  {
-    id: "Qwen2.5-3B-Instruct-q4f16_1-MLC",
-    name: "Qwen 2.5 3B (Advanced)",
-    size: "~1.9GB",
-    description: "Alibaba's multilingual powerhouse"
-  }
-];
+import { AVAILABLE_MODELS } from "@/lib/models";
 
 export default function SettingsPage() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -100,6 +75,33 @@ export default function SettingsPage() {
     const newValue = !enableAnalytics;
     setEnableAnalytics(newValue);
     localStorage.setItem("enable_analytics", String(newValue));
+  };
+  
+  const handleDeleteAccount = async () => {
+    if (!confirm("🚨 PERMANENT ACTION: Are you sure you want to delete your account? This will erase all your data, notifications, and settings. This cannot be undone.")) return;
+    
+    // Triple confirmation for such a destructive action
+    if (!confirm("Second confirmation: All your personal configurations and access will be lost. Proceed?")) return;
+
+    try {
+      const token = localStorage.getItem("mcp_token");
+      const res = await fetch("/api/account/delete", {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error("Failed to delete account");
+
+      // Clear all user data
+      localStorage.removeItem("mcp_token");
+      localStorage.removeItem("mcp_refresh_token");
+      localStorage.removeItem("mcp_user");
+      
+      alert("Your account has been permanently deleted. We're sorry to see you go.");
+      window.location.href = "/";
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
   };
 
   const handleClearCache = async () => {
@@ -326,6 +328,33 @@ export default function SettingsPage() {
                     }`}
                   ></span>
                 </button>
+              </div>
+            </div>
+
+            {/* Danger Zone */}
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border-2 border-red-100 dark:border-red-900/20 shadow-xl mb-6 overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                 <span className="text-6xl font-black text-red-600 uppercase -rotate-12 transform">Danger</span>
+              </div>
+              
+              <h2 className="text-xl font-black mb-6 flex items-center gap-3 text-red-600">
+                <span className="text-2xl">⚠️</span>
+                Danger Zone
+              </h2>
+              
+              <div className="p-6 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-red-900 dark:text-red-400 mb-1">Delete Account</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Permanently remove your account and all associated data</p>
+                  </div>
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="px-6 py-3 rounded-xl bg-red-600 text-white font-black text-xs uppercase tracking-widest hover:bg-red-700 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-red-500/30 whitespace-nowrap"
+                  >
+                    Delete My Account
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -1,6 +1,6 @@
 ---
 title: "Part 7: Mastering Agentic Workflows — Moving Beyond the Chat Box"
-date: "2026-02-04"
+date: "2026-02-10"
 excerpt: "A step-by-step guide to supercharging your development efficiency using AI Agent rules, custom skills, and automated workflows."
 coverImage: "/assets/blog/mastering-agentic-workflows/cover.png"
 author:
