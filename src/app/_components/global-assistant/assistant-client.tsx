@@ -247,7 +247,7 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                   </div>
                   <div>
-                    <h3 className="font-black text-slate-900 dark:text-white leading-none mb-1">Spark AI</h3>
+                    <h3 className="font-black text-slate-900 dark:text-white leading-none mb-1">EchoBot</h3>
                     <button 
                       onClick={() => setShowModelSelector(!showModelSelector)}
                       className="flex items-center gap-1 group/btn"
@@ -316,7 +316,7 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
              {messages.length === 0 && (
                <div className="h-full flex flex-col items-center justify-center text-center p-4">
                   <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center mb-6 text-2xl">🧠</div>
-                  <h4 className="text-xl font-black mb-2">Welcome to Spark AI!</h4>
+                  <h4 className="text-xl font-black mb-2">Welcome to EchoBot!</h4>
                   <p className="text-xs text-slate-500 font-medium mb-6">I'm your local AI. I know your posts and can help you write, summarize, or just chat. Feel free to explore!</p>
                   
                   <div className="relative group">
