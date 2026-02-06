@@ -356,9 +356,20 @@ export default function WriterClient({ guidelines, promptTemplate, postsContext 
 
         const today = new Date().toISOString().split("T")[0];
         const systemPrompt = promptTemplate.replace("{{posts_context}}", postsContext).replace("{{guidelines}}", guidelines).replace("{{today}}", today);
+        
+        // Optimize for small models (< 1B)
+        const isSmallModel = selectedModel.includes("135M") || selectedModel.includes("0.5B") || selectedModel.includes("360M");
+        let finalSystemPrompt = systemPrompt;
+        
+        if (isSmallModel) {
+          finalSystemPrompt = `You are EchoBot Writer. Help the user with blog drafts.
+Today: ${today}
+Rules: Concise expert tone. Markdown only. Follow instructions exactly.`;
+        }
+
         const chatHistory = [
-          { role: "system", content: systemPrompt }, 
-          ...currentMessages.map(m => ({ role: m.role, content: m.content })),
+          { role: "system", content: finalSystemPrompt }, 
+          ...currentMessages.map((m: any) => ({ role: m.role, content: m.content })),
           { role: "user", content: rawInput }
         ];
         
@@ -417,7 +428,19 @@ export default function WriterClient({ guidelines, promptTemplate, postsContext 
         }
         const today = new Date().toISOString().split("T")[0];
         const systemPrompt = promptTemplate.replace("{{posts_context}}", postsContext).replace("{{guidelines}}", guidelines).replace("{{today}}", today);
-        const chatHistory = [{ role: "system", content: systemPrompt }, ...currentMessages.map(m => ({ role: m.role, content: m.content })), { role: "user", content: topic }];
+        
+        // Optimize for small models (< 1B)
+        const isSmallModel = selectedModel.includes("135M") || selectedModel.includes("0.5B") || selectedModel.includes("360M");
+        let finalSystemPrompt = systemPrompt;
+
+        if (isSmallModel) {
+          finalSystemPrompt = `You are EchoBot Writer. Generate a blog post about: ${topic}
+Today: ${today}
+Expert guidelines: ${guidelines.substring(0, 500)}...
+Output EXACT Markdown starting with frontmatter. No chatter.`;
+        }
+
+        const chatHistory = [{ role: "system", content: finalSystemPrompt }, ...currentMessages.map((m: any) => ({ role: m.role, content: m.content })), { role: "user", content: topic }];
         const chunks = await activeEngine.chat.completions.create({ 
           messages: chatHistory as any, 
           stream: true,
@@ -728,7 +751,7 @@ export default function WriterClient({ guidelines, promptTemplate, postsContext 
                     className="flex items-center gap-1 group/btn -mt-0.5"
                   >
                     <span className="text-[11px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 group-hover/btn:text-indigo-500 transition-colors">
-                      {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || 'Select Model'}
+                      {AVAILABLE_MODELS.find((m: any) => m.id === selectedModel)?.name || 'Select Model'}
                     </span>
                     <svg className={`w-2.5 h-2.5 text-slate-300 transition-transform ${showModelSelector ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
                   </button>
@@ -740,7 +763,7 @@ export default function WriterClient({ guidelines, promptTemplate, postsContext 
                 <div className="absolute top-12 left-0 w-64 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                   <div className="p-2 max-h-[400px] overflow-y-auto">
                     <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-slate-800 mb-1">Select Neural Model</div>
-                    {AVAILABLE_MODELS.map((model) => (
+                    {AVAILABLE_MODELS.map((model: any) => (
                       <button
                         key={model.id}
                         onClick={() => handleModelChange(model.id)}
