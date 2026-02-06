@@ -15,8 +15,7 @@ export async function generatePost(options = {}) {
     topic = process.env.TOPIC,
     apiKey = process.env.GEMINI_API_KEY,
     releaseDateInput = process.env.RELEASE_DATE || "now",
-    contextInput = process.env.ADDITIONAL_CONTEXT || "",
-    isDraft = process.env.MODE === "draft"
+    contextInput = process.env.ADDITIONAL_CONTEXT || ""
   } = options;
 
   if (!topic || !apiKey) {
@@ -170,11 +169,6 @@ export async function generatePost(options = {}) {
     finalContent = finalContent.substring(3, finalContent.length - 3).trim();
   }
 
-  // Prefix with [DRAFT] if in draft mode
-  if (isDraft) {
-    finalContent = finalContent.replace(/^title: "(.*)"/m, 'title: "[DRAFT] $1"');
-  }
-
   const fileName = `${slug}.md`;
   const filePath = path.join(postsDir, fileName);
 
@@ -252,7 +246,6 @@ export async function generatePost(options = {}) {
 
   console.log(`\n✅ Pipeline Complete!`);
   console.log(`Release Date: ${finalReleaseDate}`);
-  if (isDraft) console.log(`Mode: DRAFT`);
 }
 
 // Run if called directly

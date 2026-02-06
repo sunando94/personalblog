@@ -6,7 +6,7 @@ export const maxDuration = 300; // Allow for long generation times
 
 export async function POST(req: NextRequest) {
   try {
-    const { topic, context, isDraft } = await req.json();
+    const { topic, context } = await req.json();
 
     if (!topic) {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });
@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
     await generatePost({
       topic,
       contextInput: context,
-      isDraft: isDraft || false,
       releaseDateInput: "now"
     });
 

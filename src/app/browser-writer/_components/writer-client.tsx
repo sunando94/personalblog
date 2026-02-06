@@ -47,33 +47,9 @@ export default function WriterClient({ guidelines, promptTemplate }: WriterClien
     setError("");
 
     try {
-      // 1. Try Remote API (Gemini) first
-      console.log("Attempting Remote Generation...");
-      const response = await fetch("/api/generate-blog-post", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, context, isDraft: false }),
-      });
-
-      if (response.ok) {
-        setResult("# Success!\nYour post was generated via Gemini and saved to the repository.\n\nCheck your /_posts folder or GitHub deployment.");
-        setGenerating(false);
-        return;
-      }
-
-      const data = await response.json();
-      
-      // 2. Fallback to Local Engine if Rate Limited
-      if (response.status === 429) {
-        console.warn("Gemini Rate Limit Exceeded. Falling back to Local GPU...");
-        
-        if (!engine) {
-          setError("Cloud API limit reached! Please click 'Pre-load GPU Engine' to continue with Local GPU inference.");
-          setGenerating(false);
-          return;
-        }
-
-        // Local Generation logic (WebLLM)
+      // 1. If Local Engine is already loaded, prioritize Local Inference
+      if (engine) {
+        console.log("Local Engine loaded. Prioritizing Local GPU Inference...");
         const today = new Date().toISOString().split("T")[0];
         const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
         
@@ -96,6 +72,37 @@ export default function WriterClient({ guidelines, promptTemplate }: WriterClien
           fullText += content;
           setResult(fullText);
         }
+        setGenerating(false);
+        return;
+      }
+
+      // 2. Try Remote API (Gemini) if local engine isn't pre-loaded
+      console.log("Attempting Remote Generation...");
+      const response = await fetch("/api/generate-blog-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, context }),
+      });
+
+      if (response.ok) {
+        setResult("# Success!\nYour post was generated via Gemini and saved to the repository.\n\nCheck your /_posts folder or GitHub deployment.");
+        setGenerating(false);
+        return;
+      }
+
+      const data = await response.json();
+      
+      // 3. Fallback to Local Engine if Rate Limited or API Key is missing
+      if (response.status === 429 || data.message?.includes("GEMINI_API_KEY") || data.error?.includes("LIMIT")) {
+        const isKeyMissing = data.message?.includes("GEMINI_API_KEY");
+        console.warn(isKeyMissing ? "Remote API Key missing." : "Gemini Rate Limit Exceeded.");
+        
+        setError(isKeyMissing 
+          ? "Cloud API Key is missing! Please click 'Pre-load GPU Engine' to use Local GPU mode instead." 
+          : "Cloud API limit reached! Please click 'Pre-load GPU Engine' to continue with Local GPU inference.");
+        
+        setGenerating(false);
+        return;
       } else {
         throw new Error(data.message || "Unknown error occurred.");
       }

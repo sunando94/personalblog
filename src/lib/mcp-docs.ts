@@ -238,13 +238,6 @@ export const mcpDocsHtml = (origin: string) => `<!DOCTYPE html>
                             <label>Context (URL/Text)</label>
                             <textarea id="gen-context" rows="3" placeholder="Additional source material..."></textarea>
                         </div>
-                        <div class="input-group">
-                            <label>Mode</label>
-                            <select id="gen-mode">
-                                <option value="prod">Production</option>
-                                <option value="draft">Draft</option>
-                            </select>
-                        </div>
                     </div>
 
                     <div id="params-list_posts" class="params-section" style="display:none">
@@ -298,8 +291,7 @@ export const mcpDocsHtml = (origin: string) => `<!DOCTYPE html>
             if (tool === 'generate_blog_post') {
                 args = {
                     topic: document.getElementById('gen-topic').value,
-                    additional_context: document.getElementById('gen-context').value,
-                    mode: document.getElementById('gen-mode').value
+                    additional_context: document.getElementById('gen-context').value
                 };
             } else if (tool === 'read_post') {
                 args = { slug: document.getElementById('read-slug').value };
