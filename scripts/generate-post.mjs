@@ -178,10 +178,79 @@ export async function generatePost(options = {}) {
   const fileName = `${slug}.md`;
   const filePath = path.join(postsDir, fileName);
 
-  await fs.writeFile(filePath, finalContent);
+  // Helper to push to GitHub if we are in a read-only environment
+  const pushToGithub = async (content, path) => {
+    const token = process.env.GITHUB_TOKEN;
+    const repo = process.env.GITHUB_REPO || "sunando94/personalblog";
+    const branch = process.env.GITHUB_BRANCH || "dev";
+    
+    if (!token) {
+      console.warn("Skipping GitHub push: GITHUB_TOKEN not found.");
+      return false;
+    }
+
+    console.log(`Pushing to GitHub: ${repo} (${branch})...`);
+    
+    try {
+      // 1. Get the current file SHA if it exists (to update)
+      const getUrl = `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`;
+      const getRes = await fetch(getUrl, {
+        headers: { "Authorization": `token ${token}` }
+      });
+      
+      let sha;
+      if (getRes.status === 200) {
+        const fileData = await getRes.json();
+        sha = fileData.sha;
+      }
+
+      // 2. Create or Update file
+      const putUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
+      const putRes = await fetch(putUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: `Add/Update blog post: ${fileName}`,
+          content: Buffer.from(content).toString("base64"),
+          branch: branch,
+          sha: sha // Only needed for updates
+        })
+      });
+
+      if (putRes.ok) {
+        console.log("Successfully pushed to GitHub.");
+        return true;
+      } else {
+        const err = await putRes.text();
+        throw new Error(`GitHub API failed: ${err}`);
+      }
+    } catch (e) {
+      console.error("GitHub push failed:", e.message);
+      return false;
+    }
+  };
+
+  // Attempt local write
+  try {
+    await fs.writeFile(filePath, finalContent);
+    console.log(`Post generated locally: ${filePath}`);
+  } catch (e) {
+    if (e.code === 'EROFS' || e.message.includes('read-only')) {
+      console.warn("Local filesystem is read-only. Attempting GitHub push fallback...");
+    } else {
+      throw e;
+    }
+  }
+
+  // Always attempt GitHub push if token is present (to ensure persistence)
+  if (process.env.GITHUB_TOKEN) {
+    await pushToGithub(finalContent, `_posts/${fileName}`);
+  }
 
   console.log(`\n✅ Pipeline Complete!`);
-  console.log(`Post generated: ${filePath}`);
   console.log(`Release Date: ${finalReleaseDate}`);
   if (isDraft) console.log(`Mode: DRAFT`);
 }
