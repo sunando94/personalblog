@@ -111,6 +111,9 @@ export async function generatePost(options = {}) {
     apiKey = process.env.GEMINI_API_KEY,
     releaseDateInput = process.env.RELEASE_DATE || "now",
     contextInput = process.env.ADDITIONAL_CONTEXT || "",
+    authorName = process.env.AUTHOR_NAME || "Personal Blog Author",
+    authorPicture = process.env.AUTHOR_PICTURE || "/assets/blog/authors/default.jpeg",
+    coverImage = "",
     dryRun = false,
     mcpMode = false
   } = options;
@@ -221,7 +224,10 @@ export async function generatePost(options = {}) {
     context: resolvedContext || "No additional context provided.",
     today,
     slug,
-    finalReleaseDate: finalReleaseDate
+    finalReleaseDate: finalReleaseDate,
+    authorName,
+    authorPicture,
+    coverImage
   });
 
   let finalContent = await generateWithFallback(unifiedPrompt, "Unified Agent");

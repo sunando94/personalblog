@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import * as webllm from "@mlc-ai/web-llm";
 
 interface Message {
@@ -28,11 +28,30 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedModel, setSelectedModel] = useState("Llama-3.2-1B-Instruct-q4f32_1-MLC");
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load model preference
   useEffect(() => {
     const preferredModel = localStorage.getItem("preferred_model");
     if (preferredModel) setSelectedModel(preferredModel);
+  }, []);
+
+  // Auto-Sleep Logic: 5 minutes of inactivity
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    
+    inactivityTimerRef.current = setTimeout(() => {
+      if (engine) {
+        console.log("Global Assistant Engine entering deep sleep due to 5min inactivity...");
+        setEngine(null);
+      }
+    }, 5 * 60 * 1000);
+  }, [engine]);
+
+  useEffect(() => {
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    };
   }, []);
 
   // Auto-scroll logic
@@ -50,14 +69,6 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
     }
   }, [input]);
 
-  // Initialize engine on first open or auto-load
-  useEffect(() => {
-    const autoLoad = localStorage.getItem("auto_load_model") === "true";
-    if ((isOpen || autoLoad) && !engine && !loading) {
-      initEngine();
-    }
-  }, [isOpen]);
-
   async function initEngine() {
     setLoading(true);
     setError("");
@@ -68,16 +79,32 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
         },
       });
       setEngine(newEngine);
+      resetInactivityTimer();
+      return newEngine;
     } catch (err: any) {
       setError(`Local GPU failed: ${err.message}.`);
       console.error(err);
+      throw err;
     } finally {
       setLoading(false);
     }
   }
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleStop = async () => {
+    if (engine) {
+      await engine.interruptGenerate();
+    } else if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setGenerating(false);
+  };
+
   const handleSend = async () => {
     if (!input.trim() || generating) return;
+
+    resetInactivityTimer();
 
     const userMsg: Message = { role: "user", content: input };
     const newMessages = [...messages, userMsg];
@@ -87,7 +114,13 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
     setError("");
 
     try {
-      if (engine) {
+      let activeEngine = engine;
+      // AUTO-WAKE: If local mode but engine is asleep, wake it up now
+      if (!activeEngine) {
+        activeEngine = await initEngine();
+      }
+
+      if (activeEngine) {
         // Local GPU Flow
         const today = new Date().toISOString().split("T")[0];
         const systemPrompt = promptTemplate
@@ -100,7 +133,7 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
           ...newMessages
         ];
 
-        const chunks = await engine.chat.completions.create({
+        const chunks = await activeEngine.chat.completions.create({
           messages: chatHistory as any,
           stream: true,
         });
@@ -119,10 +152,12 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
         }
       } else {
         // Remote API Fallback
+        abortControllerRef.current = new AbortController();
         const response = await fetch("/api/generate-blog-post", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ topic: input }),
+          signal: abortControllerRef.current.signal,
         });
 
         const data = await response.json();
@@ -131,9 +166,12 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
         setMessages(prev => [...prev, { role: "assistant", content: data.content }]);
       }
     } catch (err: any) {
-      setError(err.message);
+      if (err.name !== 'AbortError') {
+        setError(err.message);
+      }
     } finally {
       setGenerating(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -198,7 +236,7 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
                     <div className="flex items-center gap-1.5">
                        <span className={`w-1.5 h-1.5 rounded-full ${engine ? 'bg-green-500 animate-pulse' : loading ? 'bg-blue-500 animate-bounce' : 'bg-slate-400'}`}></span>
                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          {engine ? 'Neural Engine Active' : loading ? 'Waking Neural Forge...' : 'Remote Fallback Active'}
+                          {engine ? 'Neural Engine Active' : loading ? 'Waking Neural Forge...' : 'Auto-Wake on Message'}
                        </span>
                     </div>
                   </div>
@@ -284,13 +322,23 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
                   placeholder="Ask local assistant..."
                   className="flex-1 py-2 bg-transparent outline-none text-sm font-medium resize-none max-h-[160px]"
                 />
-                <button 
-                  onClick={handleSend}
-                  disabled={!input.trim() || generating || !engine}
-                  className={`p-2 rounded-xl transition-all ${!input.trim() || generating || !engine ? 'text-slate-300' : 'text-blue-600 hover:bg-white dark:hover:bg-slate-800 shadow-sm active:scale-90'}`}
-                >
-                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
-                </button>
+                {generating ? (
+                  <button 
+                    onClick={handleStop}
+                    className="p-2 rounded-xl transition-all text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-sm active:scale-90"
+                    title="Stop generating"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handleSend}
+                    disabled={!input.trim()}
+                    className={`p-2 rounded-xl transition-all ${!input.trim() ? 'text-slate-300' : 'text-blue-600 hover:bg-white dark:hover:bg-slate-800 shadow-sm active:scale-90'}`}
+                  >
+                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+                  </button>
+                )}
              </div>
              <p className="mt-3 text-[8px] text-center text-slate-400 font-bold uppercase tracking-widest">Local Session • WebGPU Secured</p>
           </div>

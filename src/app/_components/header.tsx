@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 const Header = () => {
   const [user, setUser] = useState<{ name: string; picture?: string; scope?: string; role?: string } | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const refreshUser = () => {
     const token = localStorage.getItem("mcp_token");
@@ -25,9 +26,43 @@ const Header = () => {
     }
   };
 
+  const fetchUnreadCount = async () => {
+    try {
+      let userId = localStorage.getItem("notification_user_id");
+      
+      // PRIORITY FIX: Use Authenticated User ID if logged in
+      const token = localStorage.getItem("mcp_token");
+      if (token) {
+        try {
+          const payload = JSON.parse(decodeURIComponent(escape(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))));
+          if (payload.sub) {
+             userId = payload.sub;
+          }
+        } catch (e) {
+          // Token invalid, fall back to guest ID
+        }
+      }
+
+      if (!userId) {
+        // Create if doesn't exist to ensure we have a persistent ID for guests
+        userId = `user_${crypto.randomUUID()}`;
+        localStorage.setItem("notification_user_id", userId);
+      }
+      
+      const response = await fetch(`/api/notifications?userId=${userId}&unreadOnly=true`);
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notification count", error);
+    }
+  };
+
   useEffect(() => {
     // 1. Initial Load
     refreshUser();
+    fetchUnreadCount();
 
     // 2. Listen for URL tokens (immediate update after redirect)
     if (typeof window !== 'undefined') {
@@ -43,9 +78,13 @@ const Header = () => {
     window.addEventListener('storage', refreshUser);
     window.addEventListener('mcp_auth_changed', refreshUser);
     
+    // Refresh notifications every 30s
+    const notificationInterval = setInterval(fetchUnreadCount, 30000);
+    
     return () => {
       window.removeEventListener('storage', refreshUser);
       window.removeEventListener('mcp_auth_changed', refreshUser);
+      clearInterval(notificationInterval);
     };
   }, []);
 
@@ -98,11 +137,18 @@ const Header = () => {
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-all group focus:outline-none border border-transparent hover:border-slate-100 dark:hover:border-slate-800"
                 >
-                  <img 
-                    src={user?.picture || `https://ui-avatars.com/api/?name=${user?.name || 'Guest'}&background=random`} 
-                    alt={user?.name || 'Guest'} 
-                    className="w-8 h-8 rounded-full object-cover shadow-sm"
-                  />
+                  <div className="relative">
+                    <img 
+                      src={user?.picture || `https://ui-avatars.com/api/?name=${user?.name || 'Guest'}&background=random`} 
+                      alt={user?.name || 'Guest'} 
+                      className="w-8 h-8 rounded-full object-cover shadow-sm"
+                    />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 border-2 border-white dark:border-slate-950 rounded-full flex items-center justify-center">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm font-black text-gray-900 dark:text-white hidden sm:block">
                     {user?.name || 'Guest'}
                   </span>
@@ -154,7 +200,21 @@ const Header = () => {
                         <span className="text-gray-400 group-hover:text-blue-600 transition-colors"><KeyIcon /></span>
                         <span className="text-sm font-bold text-gray-700 dark:text-slate-200 group-hover:text-blue-600 transition-colors">API Token</span>
                       </Link>
-                      <DropdownItem icon={<BellIcon />} label="Notifications" count={2} />
+                      <Link 
+                        href="/notifications" 
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-4 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group relative"
+                      >
+                        <span className="text-gray-400 group-hover:text-indigo-600 transition-colors"><BellIcon /></span>
+                        <div className="flex-1 flex items-center justify-between">
+                          <span className="text-sm font-bold text-gray-700 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">Notifications</span>
+                          {unreadCount > 0 && (
+                            <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
                       <Link 
                         href="/settings" 
                         onClick={() => setIsDropdownOpen(false)}

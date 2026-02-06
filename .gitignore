@@ -44,3 +44,6 @@ next-env.d.ts
 
 #postdoc
 /post_docs
+
+# VS Code Redis credentials
+.vscode/settings.json

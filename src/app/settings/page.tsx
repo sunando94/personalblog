@@ -42,11 +42,10 @@ export default function SettingsPage() {
   const [storage, setStorage] = useState<StorageEstimate>({});
   const [autoLoadModel, setAutoLoadModel] = useState(false);
   const [enableAnalytics, setEnableAnalytics] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     // Load theme
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+    const savedTheme = localStorage.getItem("personal-blog-theme") as "light" | "dark" | null;
     if (savedTheme) {
       setTheme(savedTheme);
     } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
@@ -69,8 +68,21 @@ export default function SettingsPage() {
 
   const handleThemeChange = (newTheme: "light" | "dark") => {
     setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    localStorage.setItem("personal-blog-theme", newTheme);
+    
+    // Apply theme
+    if (newTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    document.documentElement.setAttribute("data-mode", newTheme);
+
+    // Trigger storage event to sync across tabs/components
+    window.dispatchEvent(new StorageEvent("storage", {
+      key: "personal-blog-theme",
+      newValue: newTheme
+    }));
   };
 
   const handleModelChange = (modelId: string) => {
@@ -78,14 +90,16 @@ export default function SettingsPage() {
     localStorage.setItem("preferred_model", modelId);
   };
 
-  const handleSaveSettings = () => {
-    setSaving(true);
-    localStorage.setItem("auto_load_model", String(autoLoadModel));
-    localStorage.setItem("enable_analytics", String(enableAnalytics));
-    
-    setTimeout(() => {
-      setSaving(false);
-    }, 1000);
+  const handleAutoLoadChange = () => {
+    const newValue = !autoLoadModel;
+    setAutoLoadModel(newValue);
+    localStorage.setItem("auto_load_model", String(newValue));
+  };
+
+  const handleAnalyticsChange = () => {
+    const newValue = !enableAnalytics;
+    setEnableAnalytics(newValue);
+    localStorage.setItem("enable_analytics", String(newValue));
   };
 
   const handleClearCache = async () => {
@@ -238,7 +252,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-slate-500">Automatically initialize GPU on page load</p>
                   </div>
                   <button
-                    onClick={() => setAutoLoadModel(!autoLoadModel)}
+                    onClick={handleAutoLoadChange}
                     className={`relative w-14 h-8 rounded-full transition-colors ${
                       autoLoadModel ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-700"
                     }`}
@@ -301,7 +315,7 @@ export default function SettingsPage() {
                   <p className="text-xs text-slate-500">Help improve the platform with usage data</p>
                 </div>
                 <button
-                  onClick={() => setEnableAnalytics(!enableAnalytics)}
+                  onClick={handleAnalyticsChange}
                   className={`relative w-14 h-8 rounded-full transition-colors ${
                     enableAnalytics ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-700"
                   }`}
@@ -315,26 +329,11 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Save Button */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handleSaveSettings}
-                disabled={saving}
-                className={`flex-1 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
-                  saving
-                    ? "bg-green-500 text-white"
-                    : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-500/20"
-                }`}
-              >
-                {saving ? "✓ Saved!" : "Save Preferences"}
-              </button>
-              <Link
-                href="/"
-                className="px-8 py-5 rounded-2xl border border-slate-200 dark:border-slate-800 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-900 transition-all"
-              >
-                Cancel
-              </Link>
+            {/* Bottom Actions - Removed since everything saves instantly */}
+            <div className="flex items-center justify-center pt-6 pb-6">
+               <p className="text-sm text-slate-400 font-medium">All changes are saved automatically</p>
             </div>
+
           </div>
         </Container>
       </div>

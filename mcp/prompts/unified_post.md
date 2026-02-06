@@ -21,14 +21,16 @@ Critique your own draft for:
 
 ### STAGE 3: SEO & FRONTMATTER
 Finalize the post with a technical title and a 2-sentence expert excerpt.
-Ensure the frontmatter follows this EXACT schema:
+Ensure the frontmatter follows this EXACT schema. 
+CRITICAL: You MUST leave 'coverImage' and 'ogImage.url' as empty strings "". Do NOT hallucinate paths.
+
 ---
 title: "Technical Catchy Title"
 date: "{{today}}"
 excerpt: "Two sentence expert summary."
-coverImage: "/assets/blog/{{slug}}/cover.png"
-author: { name: "Sunando Bhattacharya", picture: "/assets/blog/authors/sunando-bhattacharya.jpeg" }
-ogImage: { url: "/assets/blog/{{slug}}/cover.png" }
+coverImage: "{{coverImage}}" 
+author: { name: "{{authorName}}", picture: "{{authorPicture}}" }
+ogImage: { url: "{{coverImage}}" } 
 releaseDate: "{{finalReleaseDate}}"
 ---
 

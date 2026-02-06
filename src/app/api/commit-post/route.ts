@@ -11,10 +11,10 @@ export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const payload = await getTokenPayload(authHeader);
 
-  if (!payload || payload.scope !== "writer") {
+  if (!payload || (payload.scope !== "writer" && payload.scope !== "admin")) {
     return NextResponse.json({ 
       error: "FORBIDDEN", 
-      message: "You do not have permission to commit to the repository. Only Authorized Writers can perform this action." 
+      message: "You do not have permission to commit to the repository. Only Authorized Writers and Admins can perform this action." 
     }, { status: 403 });
   }
 
