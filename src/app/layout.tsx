@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import cn from "classnames";
 import { ThemeSwitcher } from "./_components/theme-switcher";
+import Header from "./_components/header";
+import { GlobalAssistant } from "./_components/global-assistant";
 import { Analytics } from '@vercel/analytics/next';
 import "highlight.js/styles/github-dark.css";
 
@@ -45,8 +47,10 @@ export default function RootLayout({
         className={cn(inter.className, "dark:bg-slate-900 dark:text-slate-400")}
       >
         <ThemeSwitcher />
+        <Header />
         <div className="min-h-screen">{children}</div>
         <Footer />
+        <GlobalAssistant />
         <Analytics />
       </body>
     </html>

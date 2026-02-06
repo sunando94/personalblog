@@ -90,14 +90,17 @@ export function createServer() {
         const startTime = Date.now();
         
         try {
-          await generatePost({
+          const result = await generatePost({
             topic: args.topic,
             contextInput: args.additional_context,
             releaseDateInput: args.release_date || "now",
+            mcpMode: true
           });
           const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+          const branchSuffix = result.github?.branch ? ` on branch \`${result.github.branch}\`` : '';
+          const prSuffix = result.github?.prUrl ? `\n\nReview & Merge here: ${result.github.prUrl}` : '';
           return {
-            content: [{ type: "text", text: `Success! Blog post generated for "${args.topic}" in ${duration}s.` }],
+            content: [{ type: "text", text: `Success! Blog post generated for "${args.topic}" in ${duration}s${branchSuffix}.${prSuffix}` }],
           };
         } catch (genError) {
           if (genError.message?.includes("429") || genError.message?.includes("limit reached")) {

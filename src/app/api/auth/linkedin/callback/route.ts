@@ -1,75 +1,79 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createSocialTokenPair, ExternalProfile } from "@/lib/mcp-auth";
 
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const code = searchParams.get("code");
-    const state = searchParams.get("state");
-    const error = searchParams.get("error");
-    const errorDescription = searchParams.get("error_description");
+export async function GET(req: NextRequest) {
+  const { searchParams, origin } = new URL(req.url);
+  const code = searchParams.get("code");
+  const isMock = searchParams.get("mock") === "true";
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const baseUrl = siteUrl;
+  let profile: ExternalProfile;
 
-    // Default redirect back to home if state is missing
-    const returnTo = state ? decodeURIComponent(state) : "/";
+  if (isMock) {
+    profile = {
+      id: searchParams.get("id") || "mock-123",
+      name: searchParams.get("name") || "Mock User",
+      picture: `https://ui-avatars.com/api/?name=${searchParams.get("name")}&background=random`,
+      provider: "linkedin"
+    };
+  } else {
+    if (!code) return NextResponse.redirect(`${origin}/profile?error=no_code`);
 
-    if (error) {
-        console.error("LinkedIn Auth Error:", error, errorDescription);
-        return NextResponse.redirect(`${baseUrl}${returnTo}?linkedin_error=${encodeURIComponent(errorDescription || error)}`);
-    }
-
-    if (!code) {
-        return NextResponse.redirect(`${baseUrl}${returnTo}?linkedin_error=No code returned`);
-    }
+    const clientId = process.env.LINKEDIN_CLIENT_ID;
+    const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+    const redirectUri = `${origin}/api/auth/linkedin/callback`;
 
     try {
-        const clientId = process.env.LINKEDIN_CLIENT_ID;
-        const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
-        const redirectUri = `${baseUrl}/api/auth/linkedin/callback`;
+      // 1. Exchange 'code' for 'access_token'
+      const tokenResponse = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: redirectUri,
+          client_id: clientId!,
+          client_secret: clientSecret!,
+        }),
+      });
 
-        if (!clientId || !clientSecret) {
-            throw new Error("LinkedIn credentials not configured");
-        }
+      const tokenData = await tokenResponse.json();
+      if (!tokenResponse.ok) {
+        console.error("LinkedIn Token Error:", tokenData);
+        return NextResponse.redirect(`${origin}/profile?error=token_exchange_failed`);
+      }
 
-        // Exchange code for access token
-        const tokenResponse = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: new URLSearchParams({
-                grant_type: "authorization_code",
-                code: code,
-                redirect_uri: redirectUri,
-                client_id: clientId,
-                client_secret: clientSecret,
-            }),
-        });
+      // 2. Fetch profile using access_token (OpenID Connect userinfo endpoint)
+      const userinfoResponse = await fetch("https://api.linkedin.com/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
 
-        if (!tokenResponse.ok) {
-            const errorText = await tokenResponse.text();
-            throw new Error(`Failed to exchange token: ${tokenResponse.status} - ${errorText}`);
-        }
+      const userData = await userinfoResponse.json();
+      if (!userinfoResponse.ok) {
+        console.error("LinkedIn UserInfo Error:", userData);
+        return NextResponse.redirect(`${origin}/profile?error=profile_fetch_failed`);
+      }
 
-        const tokenData = await tokenResponse.json();
-        const accessToken = tokenData.access_token;
-        const expiresIn = tokenData.expires_in;
-
-        // Create response redirecting back to the original page
-        const response = NextResponse.redirect(`${baseUrl}${returnTo}?linkedin_connected=true`);
-
-        // Set HTTP-only cookie with the access token
-        response.cookies.set("linkedin_access_token", accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            path: "/",
-            maxAge: expiresIn,
-            sameSite: "lax",
-        });
-
-        return response;
-    } catch (error) {
-        console.error("LinkedIn Callback Error:", error);
-        return NextResponse.redirect(`${baseUrl}${returnTo}?linkedin_error=Failed to connect`);
+      profile = {
+        id: userData.sub,
+        name: userData.name || `${userData.given_name} ${userData.family_name}`,
+        picture: userData.picture,
+        email: userData.email,
+        provider: "linkedin"
+      };
+    } catch (err: any) {
+      console.error("LinkedIn Auth Exception:", err);
+      return NextResponse.redirect(`${origin}/profile?error=internal_auth_error`);
     }
+  }
+
+  // Create JWT for this user
+  const authData = await createSocialTokenPair(profile);
+
+  // Redirect back to profile or home with the token in a way the client can catch it.
+  // We'll use a post-login page that saves it to localStorage and redirects.
+  const response = NextResponse.redirect(`${origin}/profile`);
+  
+  // We can pass the token in a cookie temporarily or as a URL param if we trust it.
+  // Let's use a URL param for simplicity in this demo, but usually cookies are better.
+  return NextResponse.redirect(`${origin}/profile?token=${authData.access_token}&name=${encodeURIComponent(authData.name)}&picture=${encodeURIComponent(authData.picture || "")}`);
 }

@@ -3,22 +3,64 @@
 import { useState, useEffect, useRef } from "react";
 import * as webllm from "@mlc-ai/web-llm";
 
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface WriterClientProps {
   guidelines: string;
   promptTemplate: string;
+  postsContext: string;
 }
 
-export default function WriterClient({ guidelines, promptTemplate }: WriterClientProps) {
+export default function WriterClient({ guidelines, promptTemplate, postsContext }: WriterClientProps) {
   const [engine, setEngine] = useState<webllm.MLCEngineInterface | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState("");
-  const [topic, setTopic] = useState("");
-  const [context, setContext] = useState("");
-  const [result, setResult] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [committing, setCommitting] = useState(false);
   const [error, setError] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [lastFileName, setLastFileName] = useState("");
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState("Llama-3.2-1B-Instruct-q4f32_1-MLC");
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const selectedModel = "Llama-3.2-1B-Instruct-q4f32_1-MLC";
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, generating]);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 240)}px`;
+    }
+  }, [input]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("mcp_token");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role);
+      } catch (e) {
+        setUserRole('guest');
+      }
+    } else {
+      setUserRole('guest');
+    }
+
+    const preferredModel = localStorage.getItem("preferred_model");
+    if (preferredModel) setSelectedModel(preferredModel);
+  }, []);
+
+  const isGuest = !userRole || userRole === 'guest';
 
   async function initEngine() {
     setLoading(true);
@@ -27,232 +69,288 @@ export default function WriterClient({ guidelines, promptTemplate }: WriterClien
       const newEngine = await webllm.CreateMLCEngine(selectedModel, {
         initProgressCallback: (info) => {
           setProgress(info.text);
-          console.log(info.text);
         },
       });
       setEngine(newEngine);
     } catch (err: any) {
-      console.error(err);
-      setError(`Failed to initialize WebGPU engine: ${err.message}. Make sure your browser supports WebGPU and it is enabled.`);
+      setError(`Failed to initialize WebGPU engine: ${err.message}.`);
     } finally {
       setLoading(false);
     }
   }
 
-  const generatePost = async () => {
-    if (!topic) return;
+  const handleSend = async () => {
+    if (!input.trim() || generating) return;
 
+    const userMsg: Message = { role: "user", content: input };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput("");
     setGenerating(true);
-    setResult("");
     setError("");
 
     try {
-      // 1. If Local Engine is already loaded, prioritize Local Inference
       if (engine) {
-        console.log("Local Engine loaded. Prioritizing Local GPU Inference...");
+        // Local GPU Flow
         const today = new Date().toISOString().split("T")[0];
-        const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-        
-        let prompt = promptTemplate
-          .replace("{{topic}}", topic)
+        const systemPrompt = promptTemplate
+          .replace("{{posts_context}}", postsContext)
           .replace("{{guidelines}}", guidelines)
-          .replace("{{context}}", context || "No additional context provided.")
-          .replace("{{today}}", today)
-          .replace("{{slug}}", slug)
-          .replace("{{finalReleaseDate}}", today);
+          .replace("{{today}}", today);
+
+        const chatHistory = [
+          { role: "system", content: systemPrompt },
+          ...newMessages.map(m => ({ role: m.role, content: m.content }))
+        ];
 
         const chunks = await engine.chat.completions.create({
-          messages: [{ role: "user", content: prompt }],
+          messages: chatHistory as any,
           stream: true,
         });
 
         let fullText = "";
+        setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+
         for await (const chunk of chunks) {
           const content = chunk.choices[0]?.delta?.content || "";
           fullText += content;
-          setResult(fullText);
+          setMessages(prev => {
+            const next = [...prev];
+            next[next.length - 1].content = fullText;
+            return next;
+          });
         }
-        setGenerating(false);
-        return;
-      }
 
-      // 2. Try Remote API (Gemini) if local engine isn't pre-loaded
-      console.log("Attempting Remote Generation...");
-      const response = await fetch("/api/generate-blog-post", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, context }),
-      });
+        // Logic check: if fullText starts with "---", it's likely a post
+        if (fullText.trim().startsWith("---")) {
+           // Attempt to guess slug from title if present
+           const titleMatch = fullText.match(/title:\s*"(.*)"/);
+           const slug = (titleMatch ? titleMatch[1] : `draft-${Date.now()}`)
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/(^-|-$)/g, "");
+           setLastFileName(`${slug}.md`);
+        } else {
+           setLastFileName("");
+        }
 
-      if (response.ok) {
-        setResult("# Success!\nYour post was generated via Gemini and saved to the repository.\n\nCheck your /_posts folder or GitHub deployment.");
-        setGenerating(false);
-        return;
-      }
-
-      const data = await response.json();
-      
-      // 3. Fallback to Local Engine if Rate Limited or API Key is missing
-      if (response.status === 429 || data.message?.includes("GEMINI_API_KEY") || data.error?.includes("LIMIT")) {
-        const isKeyMissing = data.message?.includes("GEMINI_API_KEY");
-        console.warn(isKeyMissing ? "Remote API Key missing." : "Gemini Rate Limit Exceeded.");
-        
-        setError(isKeyMissing 
-          ? "Cloud API Key is missing! Please click 'Pre-load GPU Engine' to use Local GPU mode instead." 
-          : "Cloud API limit reached! Please click 'Pre-load GPU Engine' to continue with Local GPU inference.");
-        
-        setGenerating(false);
-        return;
       } else {
-        throw new Error(data.message || "Unknown error occurred.");
+        // Fallback to Remote API
+        const response = await fetch("/api/generate-blog-post", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic: input }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to generate");
+
+        setLastFileName(data.fileName);
+        setMessages(prev => [...prev, { role: "assistant", content: data.content }]);
       }
     } catch (err: any) {
-      console.error(err);
-      setError(`Generation failed: ${err.message}`);
+      setError(err.message);
     } finally {
       setGenerating(false);
     }
   };
 
-  const downloadPost = () => {
-    if (!result) return;
-    const blob = new Blob([result], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    a.href = url;
-    a.download = `${slug || "generated-post"}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const commitPost = async () => {
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg || lastMsg.role !== "assistant" || !lastFileName) return;
+
+    setCommitting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/commit-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          content: lastMsg.content,
+          fileName: lastFileName
+        }),
+      });
+
+      if (!res.ok) throw new Error("Commit failed");
+      
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "✅ **Success!** Your post has been committed to the repository and pushed to GitHub." 
+      }]);
+    } catch (err: any) {
+      setError(`Commit failed: ${err.message}`);
+    } finally {
+      setCommitting(false);
+    }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-      {/* Model Status Card */}
-      <div className="relative group p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-2xl shadow-blue-500/5 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h3 className="text-xl font-bold mb-1">AI Engine Status</h3>
-            <p className="text-sm text-slate-500">
-              {engine ? `Local Engine Active: ${selectedModel}` : "Primary: Gemini Cloud | Fallback: Local GPU"}
-            </p>
-          </div>
-          
-          {!engine ? (
-            <button
-              onClick={initEngine}
-              disabled={loading}
-              className={`px-8 py-3 rounded-full font-bold transition-all duration-300 transform hover:scale-105 active:scale-95 ${
-                loading 
-                ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
-                : "bg-black dark:bg-white text-white dark:text-black shadow-xl shadow-blue-500/20"
-              }`}
+    <div className="flex flex-col h-[75vh] max-h-[900px] bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden transition-all">
+      {/* Header / Engine Status */}
+      <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white/80 dark:bg-slate-950/80 backdrop-blur-md z-10">
+        <div className="flex items-center gap-3">
+          <div className={`h-2.5 w-2.5 rounded-full ${engine ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" : "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"} transition-all duration-500`}></div>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            {engine ? "Neural Engine: Active" : "Pipeline: Waiting..."}
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          {!engine && !loading && (
+            <button 
+              onClick={initEngine} 
+              className="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-2"
             >
-              {loading ? "Initializing..." : "Pre-load GPU Engine"}
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
+              Wake Neural Forge
             </button>
-          ) : (
-            <div className="flex items-center gap-2 text-green-600 font-bold">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-              </span>
-              Local GPU Online
+          )}
+          {loading && (
+            <div className="flex items-center gap-3">
+               <div className="w-32 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-600 animate-progress origin-left w-full"></div>
+               </div>
+               <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Igniting...</span>
             </div>
           )}
         </div>
+      </div>
 
-        {loading && (
-          <div className="mt-6 space-y-2">
-            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-600 transition-all duration-300"
-                style={{ width: progress.includes("%") ? progress.split("%")[0].split("(").pop() + "%" : "10%" }}
-              ></div>
+      {/* Chat History */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth">
+        {messages.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center text-center px-6 py-20">
+            <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl flex items-center justify-center mb-8 rotate-3 hover:rotate-0 transition-transform duration-500">
+               <svg className="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+               </svg>
             </div>
-            <p className="text-xs text-slate-400 font-mono truncate">{progress}</p>
+            <h3 className="text-3xl font-black mb-3 tracking-tighter">Neural <span className="text-indigo-600">Studio</span></h3>
+            <p className="text-slate-500 font-medium max-w-sm">Craft high-fidelity technical content with Spark AI, powered by your local GPU.</p>
+          </div>
+        )}
+
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
+            <div className={`max-w-[90%] md:max-w-[80%] ${
+              msg.role === "user" 
+              ? "bg-slate-900 dark:bg-white text-white dark:text-black px-6 py-4 rounded-[2rem] shadow-xl" 
+              : "w-full"
+            }`}>
+              {msg.role === "assistant" ? (
+                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 p-8 rounded-[2.5rem] shadow-sm">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-[10px]">SPARK</div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">NEURAL_DRAFT_GEN-01</span>
+                  </div>
+                  <div className="prose prose-slate dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed text-sm md:text-base font-medium">
+                    {msg.content}
+                  </div>
+                </div>
+              ) : (
+                <p className="font-bold text-sm md:text-base">{msg.content}</p>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {generating && (
+          <div className="flex justify-start animate-pulse">
+            <div className="flex items-center gap-4 p-8 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-[2.5rem] border border-indigo-100/50 dark:border-indigo-800/20">
+              <div className="flex gap-1.5">
+                 <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce"></div>
+                 <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                 <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+              </div>
+              <span className="text-xs font-black uppercase tracking-widest text-indigo-600">Neural Synthesis in Progress...</span>
+            </div>
           </div>
         )}
 
         {error && (
-          <div className={`mt-4 p-4 rounded-xl border text-sm ${
-            error.includes("limit reached") 
-            ? "bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800 text-amber-600 dark:text-amber-400"
-            : "bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800 text-red-600 dark:text-red-400"
-          }`}>
-            {error}
+          <div className="p-6 bg-red-50 dark:bg-red-900/10 text-red-600 text-[11px] font-bold rounded-2xl border border-red-100 dark:border-red-900/20 flex items-center gap-3">
+             <span className="text-lg">⚠️</span> {error}
+          </div>
+        )}
+
+        {/* Action Button (Commit) */}
+        {!generating && messages.length > 0 && messages[messages.length - 1].role === "assistant" && !messages[messages.length - 1].content.includes("✅ Success") && lastFileName && (
+          <div className="sticky bottom-0 flex flex-col md:flex-row items-center justify-center gap-4 py-8 bg-gradient-to-t from-white dark:from-slate-900 via-white/95 dark:via-slate-900/95 to-transparent">
+            {isGuest ? (
+               <div className="flex flex-col items-center gap-4 p-6 bg-slate-50 dark:bg-slate-950 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Contribution Restricted</p>
+                  <a 
+                    href="/api/auth/linkedin"
+                    className="flex items-center gap-3 px-8 py-3 bg-[#0077b5] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/10 hover:scale-105 active:scale-95 transition-all"
+                  >
+                    Login with LinkedIn to Commit
+                  </a>
+               </div>
+            ) : (
+              <button
+                onClick={commitPost}
+                disabled={committing}
+                className={`group flex items-center gap-3 px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
+                  committing ? "bg-slate-100 text-slate-400" : "bg-indigo-600 text-white shadow-2xl shadow-indigo-500/30 hover:scale-105 active:scale-95"
+                }`}
+              >
+                <svg className={`w-4 h-4 ${committing ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                </svg>
+                {committing ? "Committing..." : "Push to Repository"}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                const blob = new Blob([messages[messages.length - 1].content], { type: "text/markdown" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = lastFileName || "generation.md";
+                a.click();
+              }}
+              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors"
+            >
+              Export as Markdown
+            </button>
           </div>
         )}
       </div>
 
-      {/* Input Section */}
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <label className="block text-sm font-bold uppercase tracking-widest text-slate-400">Target Topic</label>
-          <input 
-            type="text"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="e.g. Mastering React 19 Server Components"
-            className="w-full px-6 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-lg font-medium"
-          />
-        </div>
-
-        <div className="space-y-4">
-          <label className="block text-sm font-bold uppercase tracking-widest text-slate-400">Additional Context (Optional)</label>
-          <textarea 
-            value={context}
-            onChange={(e) => setContext(e.target.value)}
-            placeholder="Paste URLs, technical specs, or personal notes here..."
-            className="w-full h-32 px-6 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all resize-none font-mono text-sm"
-          />
-        </div>
-
-        <button
-          onClick={generatePost}
-          disabled={generating || !topic}
-          className={`w-full py-5 rounded-2xl font-black text-xl tracking-tight transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 ${
-            generating || !topic
-            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-            : "bg-blue-600 text-white shadow-2xl shadow-blue-600/30 hover:shadow-blue-600/50"
-          }`}
-        >
-          {generating ? (
-            <div className="flex items-center justify-center gap-3">
-              <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {engine ? "Local GPU Working..." : "Remote Cloud Working..."}
-            </div>
-          ) : (
-            "Start AI Generation Pipeline"
-          )}
-        </button>
-      </div>
-
-      {/* Result Section */}
-      {result && (
-        <div className="space-y-4 animate-in fade-in duration-700">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold">Draft Content</h3>
+      {/* Input Area */}
+      <div className="p-4 md:p-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+        <div className="max-w-4xl mx-auto">
+          <div className={`relative flex items-end gap-2 bg-slate-50 dark:bg-slate-950 p-2 pl-6 rounded-[2rem] border-2 transition-all ${generating ? 'border-transparent opacity-50' : 'border-transparent focus-within:border-indigo-500/20 focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:shadow-2xl focus-within:shadow-indigo-500/10'}`}>
+            <textarea 
+              ref={textareaRef}
+              rows={1}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              disabled={generating}
+              placeholder="Ask me to write a technical insight..."
+              className="flex-1 py-3 bg-transparent outline-none font-medium text-slate-700 dark:text-slate-200 resize-none max-h-[240px] text-sm md:text-base leading-relaxed"
+            />
+            
             <button 
-              onClick={downloadPost}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-bold text-sm"
+              onClick={() => handleSend()}
+              disabled={!input.trim() || generating}
+              className={`p-3 rounded-2xl transition-all ${!input.trim() || generating ? 'text-slate-300' : 'text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:scale-90'}`}
             >
-              Download .md
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
             </button>
           </div>
-          <div className="p-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-inner overflow-auto max-h-[600px]">
-            <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-              {result}
-            </pre>
-          </div>
+          <p className="mt-3 text-[9px] text-center text-slate-400 font-bold uppercase tracking-widest animate-pulse">
+            Powered by WebGPU • Local Intelligence • Zero Data Leakage
+          </p>
         </div>
-      )}
+      </div>
     </div>
   );
 }

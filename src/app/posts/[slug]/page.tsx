@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { getAllPostsIncludingScheduled, getPostBySlug, getToday } from "@/lib/api";
 import markdownToHtml from "@/lib/markdownToHtml";
 import Container from "@/app/_components/container";
-import Header from "@/app/_components/header";
 import { PostBody } from "@/app/_components/post-body";
 import { PostHeader } from "@/app/_components/post-header";
 import { ShareButtons } from "@/app/_components/share-buttons";
@@ -25,7 +24,6 @@ export default async function Post(props: Params) {
     return (
       <main>
         <Container>
-          <Header />
           <ScheduledPostMessage releaseDate={post.releaseDate} />
         </Container>
       </main>
@@ -37,7 +35,6 @@ export default async function Post(props: Params) {
   return (
     <main>
       <Container>
-        <Header />
         <article className="mb-32">
           <PostHeader
             title={post.title}

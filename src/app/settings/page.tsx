@@ -1,0 +1,343 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Container from "@/app/_components/container";
+import Link from "next/link";
+
+interface StorageEstimate {
+  usage?: number;
+  quota?: number;
+}
+
+const AVAILABLE_MODELS = [
+  {
+    id: "Llama-3.2-1B-Instruct-q4f32_1-MLC",
+    name: "Llama 3.2 1B (Fast)",
+    size: "~600MB",
+    description: "Lightweight model, great for quick responses"
+  },
+  {
+    id: "Llama-3.2-3B-Instruct-q4f32_1-MLC",
+    name: "Llama 3.2 3B (Balanced)",
+    size: "~1.8GB",
+    description: "Best balance of speed and quality"
+  },
+  {
+    id: "Phi-3.5-mini-instruct-q4f16_1-MLC",
+    name: "Phi 3.5 Mini (Efficient)",
+    size: "~2.3GB",
+    description: "Microsoft's efficient reasoning model"
+  },
+  {
+    id: "Qwen2.5-3B-Instruct-q4f16_1-MLC",
+    name: "Qwen 2.5 3B (Advanced)",
+    size: "~1.9GB",
+    description: "Alibaba's multilingual powerhouse"
+  }
+];
+
+export default function SettingsPage() {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
+  const [storage, setStorage] = useState<StorageEstimate>({});
+  const [autoLoadModel, setAutoLoadModel] = useState(false);
+  const [enableAnalytics, setEnableAnalytics] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    // Load theme
+    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
+    }
+
+    // Load model preference
+    const savedModel = localStorage.getItem("preferred_model");
+    if (savedModel) setSelectedModel(savedModel);
+
+    // Load other settings
+    setAutoLoadModel(localStorage.getItem("auto_load_model") === "true");
+    setEnableAnalytics(localStorage.getItem("enable_analytics") === "true");
+
+    // Get storage estimate
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then(setStorage);
+    }
+  }, []);
+
+  const handleThemeChange = (newTheme: "light" | "dark") => {
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+  };
+
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId);
+    localStorage.setItem("preferred_model", modelId);
+  };
+
+  const handleSaveSettings = () => {
+    setSaving(true);
+    localStorage.setItem("auto_load_model", String(autoLoadModel));
+    localStorage.setItem("enable_analytics", String(enableAnalytics));
+    
+    setTimeout(() => {
+      setSaving(false);
+    }, 1000);
+  };
+
+  const handleClearCache = async () => {
+    if (!confirm("This will clear all cached WebLLM models. You'll need to re-download them. Continue?")) return;
+    
+    try {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      alert("Cache cleared successfully! Refresh the page to see changes.");
+      if (navigator.storage && navigator.storage.estimate) {
+        navigator.storage.estimate().then(setStorage);
+      }
+    } catch (e) {
+      alert("Failed to clear cache. Please try manually in browser settings.");
+    }
+  };
+
+  const formatBytes = (bytes?: number) => {
+    if (!bytes) return "0 MB";
+    const mb = bytes / (1024 * 1024);
+    if (mb > 1024) return `${(mb / 1024).toFixed(2)} GB`;
+    return `${mb.toFixed(2)} MB`;
+  };
+
+  const usagePercent = storage.usage && storage.quota 
+    ? (storage.usage / storage.quota) * 100 
+    : 0;
+
+  return (
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+      <div className="pt-12">
+        <Container>
+          <div className="max-w-4xl mx-auto px-4">
+            
+            {/* Header */}
+            <div className="mb-12">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-indigo-600 rounded-xl text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                </div>
+                <h1 className="text-4xl font-black tracking-tighter">Settings</h1>
+              </div>
+              <p className="text-slate-500 font-medium">Customize your Neural Studio experience</p>
+            </div>
+
+            {/* Appearance */}
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-xl mb-6">
+              <h2 className="text-xl font-black mb-6 flex items-center gap-3">
+                <span className="text-2xl">🎨</span>
+                Appearance
+              </h2>
+              
+              <div className="space-y-4">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-3">Theme</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => handleThemeChange("light")}
+                    className={`p-6 rounded-2xl border-2 transition-all ${
+                      theme === "light"
+                        ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
+                        : "border-slate-200 dark:border-slate-800 hover:border-indigo-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-xl">
+                        ☀️
+                      </div>
+                      <div className="text-left">
+                        <p className="font-black text-slate-900 dark:text-white">Light</p>
+                        <p className="text-xs text-slate-500">Bright & clean</p>
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleThemeChange("dark")}
+                    className={`p-6 rounded-2xl border-2 transition-all ${
+                      theme === "dark"
+                        ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
+                        : "border-slate-200 dark:border-slate-800 hover:border-indigo-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center text-xl">
+                        🌙
+                      </div>
+                      <div className="text-left">
+                        <p className="font-black text-slate-900 dark:text-white">Dark</p>
+                        <p className="text-xs text-slate-500">Easy on eyes</p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Neural Engine */}
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-xl mb-6">
+              <h2 className="text-xl font-black mb-6 flex items-center gap-3">
+                <span className="text-2xl">⚡</span>
+                Neural Engine
+              </h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-3">
+                    Preferred Local Model
+                  </label>
+                  <div className="space-y-3">
+                    {AVAILABLE_MODELS.map((model) => (
+                      <button
+                        key={model.id}
+                        onClick={() => handleModelChange(model.id)}
+                        className={`w-full p-5 rounded-2xl border-2 transition-all text-left ${
+                          selectedModel === model.id
+                            ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
+                            : "border-slate-200 dark:border-slate-800 hover:border-indigo-300"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-black text-slate-900 dark:text-white mb-1">{model.name}</p>
+                            <p className="text-xs text-slate-500 mb-2">{model.description}</p>
+                            <span className="inline-block px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                              {model.size}
+                            </span>
+                          </div>
+                          {selectedModel === model.id && (
+                            <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                  <div>
+                    <p className="font-bold text-slate-900 dark:text-white mb-1">Auto-load Model</p>
+                    <p className="text-xs text-slate-500">Automatically initialize GPU on page load</p>
+                  </div>
+                  <button
+                    onClick={() => setAutoLoadModel(!autoLoadModel)}
+                    className={`relative w-14 h-8 rounded-full transition-colors ${
+                      autoLoadModel ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                        autoLoadModel ? "translate-x-6" : ""
+                      }`}
+                    ></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Storage */}
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-xl mb-6">
+              <h2 className="text-xl font-black mb-6 flex items-center gap-3">
+                <span className="text-2xl">💾</span>
+                Storage Management
+              </h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">Cache Usage</span>
+                    <span className="text-sm font-black text-slate-900 dark:text-white">
+                      {formatBytes(storage.usage)} / {formatBytes(storage.quota)}
+                    </span>
+                  </div>
+                  <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all"
+                      style={{ width: `${Math.min(usagePercent, 100)}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    {usagePercent.toFixed(1)}% of available storage used
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleClearCache}
+                  className="w-full py-4 rounded-2xl border-2 border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 text-red-600 font-black text-sm uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/20 transition-all"
+                >
+                  Clear All Cached Models
+                </button>
+              </div>
+            </div>
+
+            {/* Privacy */}
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-xl mb-6">
+              <h2 className="text-xl font-black mb-6 flex items-center gap-3">
+                <span className="text-2xl">🔒</span>
+                Privacy & Data
+              </h2>
+              
+              <div className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-white mb-1">Anonymous Analytics</p>
+                  <p className="text-xs text-slate-500">Help improve the platform with usage data</p>
+                </div>
+                <button
+                  onClick={() => setEnableAnalytics(!enableAnalytics)}
+                  className={`relative w-14 h-8 rounded-full transition-colors ${
+                    enableAnalytics ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-700"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                      enableAnalytics ? "translate-x-6" : ""
+                    }`}
+                  ></span>
+                </button>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleSaveSettings}
+                disabled={saving}
+                className={`flex-1 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
+                  saving
+                    ? "bg-green-500 text-white"
+                    : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-500/20"
+                }`}
+              >
+                {saving ? "✓ Saved!" : "Save Preferences"}
+              </button>
+              <Link
+                href="/"
+                className="px-8 py-5 rounded-2xl border border-slate-200 dark:border-slate-800 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-900 transition-all"
+              >
+                Cancel
+              </Link>
+            </div>
+          </div>
+        </Container>
+      </div>
+    </main>
+  );
+}
