@@ -1,6 +1,6 @@
 ---
 title: "Part 8: The Production RAG Master Class — Building Systems that Scale"
-date: "2026-02-11"
+date: "2026-02-08"
 excerpt: "The grand finale of our RAG series. Bringing together advanced chunking, hybrid retrieval, and architectural patterns into a unified production-ready framework."
 coverImage: "/assets/blog/the-multi-index-architecture/cover.png"
 author:
@@ -8,7 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/the-multi-index-architecture/cover.png"
-releaseDate: "11/02/2026"
+releaseDate: "08/02/2026"
 ---
 
 # Part 8: The Production RAG Master Class — Building Systems that Scale

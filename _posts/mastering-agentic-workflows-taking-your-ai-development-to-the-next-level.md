@@ -1,6 +1,6 @@
 ---
 title: "Part 7: Mastering Agentic Workflows — Moving Beyond the Chat Box"
-date: "2026-02-10"
+date: "2026-02-07"
 excerpt: "A step-by-step guide to supercharging your development efficiency using AI Agent rules, custom skills, and automated workflows."
 coverImage: "/assets/blog/mastering-agentic-workflows/cover.png"
 author:
@@ -8,7 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/mastering-agentic-workflows/cover.png"
-releaseDate: "10/02/2026"
+releaseDate: "07/02/2026"
 ---
 
 # Part 7: Mastering Agentic Workflows — Moving Beyond the Chat Box

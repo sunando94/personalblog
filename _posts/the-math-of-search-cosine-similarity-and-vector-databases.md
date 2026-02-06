@@ -1,6 +1,6 @@
 ---
 title: "Part 3: The Math of Search — Cosine Similarity and Vector Databases"
-date: "2026-02-04"
+date: "2026-02-03"
 excerpt: "A deep dive into high-dimensional geometry, Approximate Nearest Neighbor (ANN) algorithms like HNSW, and the reranking pipelines that power sub-50ms search."
 coverImage: "/assets/blog/the-math-of-search-cosine-similarity-and-vector-databases/cover.png"
 author:

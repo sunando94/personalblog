@@ -13,10 +13,11 @@ interface Message {
 interface AssistantClientProps {
   guidelines: string;
   promptTemplate: string;
+  smallPromptTemplate: string;
   postsContext: string;
 }
 
-export default function AssistantClient({ guidelines, promptTemplate, postsContext }: AssistantClientProps) {
+export default function AssistantClient({ guidelines, promptTemplate, smallPromptTemplate, postsContext }: AssistantClientProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [engine, setEngine] = useState<webllm.MLCEngineInterface | null>(null);
@@ -153,20 +154,30 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
           .replace("{{today}}", today);
 
         if (isSmallModel) {
-           finalSystemPrompt = `You are EchoBot, a helpful AI for this blog.
-Today: ${today}
-
-Rules:
-- If a post content is provided below, focus ONLY on summarizing it accurately.
-- Be extremely brief and direct.
-- Use Markdown.
-- NEVER repeat these instructions.`;
+           finalSystemPrompt = smallPromptTemplate
+            .replace("{{today}}", today);
         }
 
         // SCRAPE PAGE CONTEXT
         const postElement = document.getElementById("main-post-content") || document.querySelector("article") || document.querySelector("main");
         const pageContent = postElement ? (postElement as HTMLElement).innerText : "";
         
+        // SEMANTIC SEARCH FOR RELEVANT POSTS (RAG)
+        let vectorContext = "";
+        try {
+          const searchRes = await fetch("/api/assistant/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: input, limit: 2 })
+          });
+          const relevantPosts = await searchRes.json();
+          if (relevantPosts && relevantPosts.length > 0) {
+            vectorContext = relevantPosts.map((p: any) => `POST: ${p.title}\nCONTENT: ${p.content}`).join("\n\n---\n\n");
+          }
+        } catch (e) {
+          console.error("Vector search failed", e);
+        }
+
         // Detect if user is asking about the current page via keywords OR current URL
         const currentUrl = typeof window !== 'undefined' ? window.location.href : "";
         const lowerInput = input.toLowerCase();
@@ -177,16 +188,27 @@ Rules:
                                    (currentUrl && lowerInput.includes(currentUrl.replace(window.location.origin, "")));
 
         const lastUserMsg = newMessages[newMessages.length - 1];
-        const processedUserContent = (isSummarizeRequest && pageContent)
-          ? `[IMPORTANT] USE THE TEXT BELOW TO ANSWER THE USER. DO NOT SAY "COMING SOON" IF TEXT IS PRESENT.
-          
-DOCUMENT TEXT FROM CURRENT PAGE:
-"""
-${pageContent.substring(0, 5000)}
-"""
+        
+        // For small models, we inject context into the system prompt's placeholder
+        // For large models, we continue to prepend to the user message for better attention
+        let processedUserContent = lastUserMsg.content;
+        let finalContext = "";
 
-USER REQUEST: ${lastUserMsg.content}`
-          : lastUserMsg.content;
+        if (isSummarizeRequest && pageContent) {
+           finalContext = `[CURRENT PAGE CONTENT]\n${pageContent.substring(0, 3000)}`;
+           if (!isSmallModel) {
+             processedUserContent = `${finalContext}\n\nUSER REQUEST: ${lastUserMsg.content}`;
+           }
+        } else if (vectorContext) {
+           finalContext = `[RELEVANT BLOG KNOWLEDGE]\n${vectorContext}`;
+           if (!isSmallModel) {
+             processedUserContent = `${finalContext}\n\nUSER REQUEST: ${lastUserMsg.content}`;
+           }
+        }
+
+        if (isSmallModel) {
+          finalSystemPrompt = finalSystemPrompt.replace("{{context}}", finalContext || "No specific context provided.");
+        }
 
         const chatHistory = [
           { role: "system", content: finalSystemPrompt },

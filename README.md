@@ -35,6 +35,45 @@ graph TD
     end
 ```
 
+## 🧠 Hybrid RAG Architecture
+
+Our blog engine uses a sophisticated **Hybrid RAG (Retrieval-Augmented Generation)** system designed to overcome the limitations of traditional semantic search and the "Lost in the Middle" phenomenon, while operating entirely within free-tier constraints.
+
+```mermaid
+graph TD
+    subgraph "Ingestion Pipeline"
+        Post[Markdown Post] --> Split[Context-Aware Splitter]
+        Split --> |"DOCUMENT: Title\nSection..."| Chunk[Text Chunks]
+        Chunk --> |Gemini Embedding-001| Vector[Vector Embedding]
+        Chunk --> |tsvector| FTS[Postgres FTS Index]
+        
+        Vector --> DB[(Postgres Database)]
+        FTS --> DB
+        
+        Global[Global Post Embedding] --> |Content Hash Check| SkipLogic{Changed?}
+        SkipLogic --> |No| End
+        SkipLogic --> |Yes| DB
+    end
+
+    subgraph "Retrieval Pipeline"
+        User[User Query] --> |Gemini Embedding-001| QueryVector[Query Vector]
+        
+        QueryVector --> |Cosine Distance| VectorSearch[Semantic Search]
+        User --> |ts_rank_cd| KeywordSearch[Lexical Search]
+        
+        VectorSearch --> |Top 15| Merger[Weighted Merger]
+        KeywordSearch --> |Top 15| Merger
+        
+        Merger --> |"0.7 * Sem + 0.3 * Lex"| Candidates[Top 10 Candidates]
+        
+        Candidates --> |Gemini 1.5 Flash| Reranker[LLM Reranker]
+        Reranker --> |"Re-order by relevance"| Final[Top 3 Contexts]
+        
+        Final --> Assistant[Global Assistant]
+    end
+```
+
+
 ## ✨ Key Features
 
 - **🤖 Model Context Protocol (MCP)**: Access your blog's functions (list posts, read content, generate articles) directly from any MCP client like **Cursor** or **Claude Desktop**.

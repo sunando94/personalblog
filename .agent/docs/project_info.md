@@ -11,6 +11,7 @@ This project is a high-performance, aesthetically pleasing personal blog built w
 - **Dynamic AI Features**: 
   - Dynamic Title/Intro generation using Gemini/OpenAI/Anthropic.
   - 25-hour caching for AI-generated content.
+  - **Hybrid RAG Engine**: Context-Aware Chunking, Semantic + Lexical search, and Agentic Reranking.
 - **Social Integration**: LinkedIn profile fetching.
 
 ## Project Structure

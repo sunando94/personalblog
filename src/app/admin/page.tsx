@@ -32,14 +32,65 @@ function AdminPanelContent() {
   const [error, setError] = useState("");
   const [diagData, setDiagData] = useState<any>(null);
   const [confirmDelete, setConfirmDelete] = useState<UserProfile | null>(null);
+  const [activeTab, setActiveTab] = useState<"users" | "vectors">("users");
+  const [posts, setPosts] = useState<any[]>([]);
+  const [syncingPost, setSyncingPost] = useState<string | null>(null);
+  const [postPage, setPostPage] = useState(1);
+  const postsPerPage = 10;
 
   useEffect(() => {
     fetchUsers();
+    fetchPosts();
     const querySearch = searchParams.get("search");
     if (querySearch) {
       setSearch(querySearch);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    setPostPage(1);
+  }, [search]);
+
+  const fetchPosts = async () => {
+    try {
+      const token = localStorage.getItem("mcp_token");
+      const res = await fetch("/api/admin/posts-embedding-status", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch posts");
+      const data = await res.json();
+      setPosts(data);
+    } catch (err: any) {
+      console.error(err.message);
+    }
+  };
+
+  const generateEmbedding = async (slug: string) => {
+    try {
+      setSyncingPost(slug);
+      const token = localStorage.getItem("mcp_token");
+      const res = await fetch("/api/admin/index-posts", {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ slug })
+      });
+      if (!res.ok) throw new Error("Failed to generate embedding");
+      const data = await res.json();
+      if (data.success) {
+        // Refresh posts to update status
+        fetchPosts();
+      } else {
+        throw new Error(data.message || "Unknown error");
+      }
+    } catch (err: any) {
+      alert(`⚠️ ${err.message}`);
+    } finally {
+      setSyncingPost(null);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -171,7 +222,7 @@ function AdminPanelContent() {
           <div className="max-w-6xl mx-auto px-4">
             
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <div>
                 <div className="flex items-center gap-3 mb-2">
                    <div className="p-2 bg-purple-600 rounded-xl text-white">
@@ -179,22 +230,42 @@ function AdminPanelContent() {
                    </div>
                    <h1 className="text-4xl font-black tracking-tighter">Admin <span className="text-purple-600">Central</span></h1>
                 </div>
-                <p className="text-slate-500 font-medium">Manage user privileges and system health.</p>
+                <p className="text-slate-500 font-medium">Manage user privileges and system intelligence.</p>
               </div>
 
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={syncCache}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                  {loading ? 'Syncing...' : 'Sync Cache'}
-                </button>
+                {activeTab === 'users' && (
+                  <button 
+                    onClick={syncCache}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    {loading ? 'Syncing...' : 'Sync Cache'}
+                  </button>
+                )}
+                {activeTab === 'vectors' && (
+                  <button 
+                    onClick={async () => {
+                      setLoading(true);
+                      await fetch("/api/admin/index-posts", { 
+                        method: "POST", 
+                        headers: { "Authorization": `Bearer ${localStorage.getItem("mcp_token")}` } 
+                      });
+                      fetchPosts();
+                      setLoading(false);
+                    }}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-indigo-600 text-white font-bold text-sm shadow-lg shadow-indigo-500/20 hover:scale-105 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Full Indexing
+                  </button>
+                )}
                 <div className="relative">
                   <input 
                     type="text" 
-                    placeholder="Search identity..." 
+                    placeholder="Search context..." 
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-12 pr-6 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all w-full md:w-80 shadow-sm font-bold text-sm"
@@ -202,6 +273,12 @@ function AdminPanelContent() {
                   <svg className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
               </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 mb-8 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl w-fit">
+               <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} label="Identity" />
+               <TabButton active={activeTab === 'vectors'} onClick={() => setActiveTab('vectors')} label="Vector Index" icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>} />
             </div>
 
             {/* Pending Requests Alert - High Visibility */}
@@ -257,7 +334,7 @@ function AdminPanelContent() {
                  <p className="text-slate-500 mb-6">{error}</p>
                  <Link href="/" className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:scale-105 transition-transform inline-block">Return Home</Link>
               </div>
-            ) : (
+            ) : activeTab === 'users' ? (
               <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
@@ -351,6 +428,119 @@ function AdminPanelContent() {
                   </div>
                 )}
               </div>
+            ) : (
+                <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in duration-500">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-slate-800">
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Document Name</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Embedding Status</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Fingerprint</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Last Updated</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                         {(() => {
+                           const filtered = posts.filter(p => p.title.toLowerCase().includes(search.toLowerCase()) || p.slug.toLowerCase().includes(search.toLowerCase()));
+                           const paginated = filtered.slice((postPage - 1) * postsPerPage, postPage * postsPerPage);
+                           const totalPages = Math.ceil(filtered.length / postsPerPage);
+                           
+                           return (
+                             <>
+                               {paginated.map(post => (
+                                 <tr key={post.slug} className="hover:bg-slate-50/50 dark:hover:bg-slate-950/50 transition-colors group">
+                                    <td className="px-8 py-6">
+                                       <div className="flex flex-col">
+                                          <Link href={`/posts/${post.slug}`} target="_blank" className="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                            {post.title}
+                                          </Link>
+                                          <p className="text-[10px] font-medium text-slate-400">{post.slug}.md</p>
+                                       </div>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                       <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${post.embeddingStatus.exists ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300'}`}></div>
+                                          <span className={`text-[10px] font-black uppercase tracking-widest ${post.embeddingStatus.exists ? 'text-green-600' : 'text-slate-400'}`}>
+                                             {post.embeddingStatus.exists ? 'Active Index' : 'Pending'}
+                                          </span>
+                                       </div>
+                                    </td>
+                                    <td className="px-8 py-6 text-[10px] font-mono text-slate-400">
+                                       {post.embeddingStatus.exists ? post.embeddingStatus.hash.substring(0, 8) : '——'}
+                                    </td>
+                                    <td className="px-8 py-6">
+                                       {post.embeddingStatus.updatedAt ? (
+                                         <div>
+                                            <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase">{new Date(post.embeddingStatus.updatedAt).toLocaleDateString()}</p>
+                                            <p className="text-[10px] text-slate-400 font-medium uppercase">{new Date(post.embeddingStatus.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                         </div>
+                                       ) : (
+                                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Never</span>
+                                       )}
+                                    </td>
+                                    <td className="px-8 py-6 text-right">
+                                       <button 
+                                         onClick={() => generateEmbedding(post.slug)}
+                                         disabled={syncingPost === post.slug}
+                                         className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${post.embeddingStatus.exists ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 hover:bg-slate-200' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95'}`}
+                                       >
+                                          {syncingPost === post.slug ? (
+                                             <span className="flex items-center gap-2">
+                                                <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                                Syncing...
+                                             </span>
+                                          ) : post.embeddingStatus.exists ? 'Refresh' : 'Generate'}
+                                       </button>
+                                    </td>
+                                 </tr>
+                               ))}
+                               {filtered.length > postsPerPage && (
+                                 <tr>
+                                   <td colSpan={5} className="px-8 py-4 bg-slate-50/50 dark:bg-slate-950/20">
+                                      <div className="flex items-center justify-between">
+                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                            Showing {(postPage - 1) * postsPerPage + 1} - {Math.min(postPage * postsPerPage, filtered.length)} of {filtered.length}
+                                         </p>
+                                         <div className="flex items-center gap-2">
+                                            <button 
+                                              disabled={postPage === 1}
+                                              onClick={() => setPostPage(p => Math.max(1, p - 1))}
+                                              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 transition-all"
+                                            >
+                                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                                            </button>
+                                            <div className="flex items-center gap-1">
+                                               {Array.from({ length: totalPages }, (_, i) => i + 1).map(num => (
+                                                  <button
+                                                    key={num}
+                                                    onClick={() => setPostPage(num)}
+                                                    className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${postPage === num ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                                                  >
+                                                     {num}
+                                                  </button>
+                                               ))}
+                                            </div>
+                                            <button 
+                                              disabled={postPage === totalPages}
+                                              onClick={() => setPostPage(p => Math.min(totalPages, p + 1))}
+                                              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 transition-all"
+                                            >
+                                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"></path></svg>
+                                            </button>
+                                         </div>
+                                      </div>
+                                   </td>
+                                 </tr>
+                               )}
+                             </>
+                           );
+                         })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
             )}
           </div>
         </Container>
@@ -386,6 +576,18 @@ function AdminPanelContent() {
         </div>
       )}
     </main>
+  );
+}
+
+function TabButton({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon?: React.ReactNode }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${active ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 
