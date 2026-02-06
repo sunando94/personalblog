@@ -13,7 +13,7 @@ import { AVAILABLE_MODELS } from "@/lib/models";
 
 export default function SettingsPage() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
+  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS.find(m => m.enabled)?.id || AVAILABLE_MODELS[0].id);
   const [storage, setStorage] = useState<StorageEstimate>({});
   const [autoLoadModel, setAutoLoadModel] = useState(false);
   const [enableAnalytics, setEnableAnalytics] = useState(false);
@@ -29,7 +29,12 @@ export default function SettingsPage() {
 
     // Load model preference
     const savedModel = localStorage.getItem("preferred_model");
-    if (savedModel) setSelectedModel(savedModel);
+    if (savedModel) {
+      const model = AVAILABLE_MODELS.find(m => m.id === savedModel);
+      if (model && model.enabled) {
+        setSelectedModel(savedModel);
+      }
+    }
 
     // Load other settings
     setAutoLoadModel(localStorage.getItem("auto_load_model") === "true");
@@ -217,7 +222,7 @@ export default function SettingsPage() {
                     Preferred Local Model
                   </label>
                   <div className="space-y-3">
-                    {AVAILABLE_MODELS.map((model) => (
+                    {AVAILABLE_MODELS.filter(m => m.enabled).map((model) => (
                       <button
                         key={model.id}
                         onClick={() => handleModelChange(model.id)}

@@ -29,14 +29,19 @@ export default function AssistantClient({ guidelines, promptTemplate, postsConte
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
+  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS.find(m => m.enabled)?.id || AVAILABLE_MODELS[0].id);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load model preference
   useEffect(() => {
     const preferredModel = localStorage.getItem("preferred_model");
-    if (preferredModel) setSelectedModel(preferredModel);
+    if (preferredModel) {
+      const model = AVAILABLE_MODELS.find(m => m.id === preferredModel);
+      if (model && model.enabled) {
+        setSelectedModel(preferredModel);
+      }
+    }
   }, []);
 
   const handleModelChange = (modelId: string) => {
@@ -306,7 +311,7 @@ USER REQUEST: ${lastUserMsg.content}`
                     <div className="absolute top-12 left-0 w-64 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                       <div className="p-2 max-h-[400px] overflow-y-auto">
                         <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-slate-800 mb-1">Select Neural Model</div>
-                        {AVAILABLE_MODELS.map((model: any) => (
+                        {AVAILABLE_MODELS.filter((m: any) => m.enabled).map((model: any) => (
                           <button
                             key={model.id}
                             onClick={() => handleModelChange(model.id)}
