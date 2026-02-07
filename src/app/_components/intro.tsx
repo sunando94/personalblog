@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Logo } from "./logo";
 import { AuthModal } from "./auth-modal";
+import { BrainSearch } from "./brain-search";
 
 export function Intro() {
   const router = useRouter();
@@ -85,6 +86,9 @@ export function Intro() {
         <p className="text-base md:text-lg text-gray-600 dark:text-gray-400">
           Join me as I write about technology, life, and everything in between.
         </p>
+
+        {/* RAG Playground: Search the Brain */}
+        <BrainSearch />
       </div>
 
       {/* Social links and CTA */}

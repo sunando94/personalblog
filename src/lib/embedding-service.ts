@@ -260,4 +260,42 @@ Example: [2, 0, 5]`;
       return [];
     }
   }
+
+  /**
+   * Generates a cited answer based on retrieved chunks
+   */
+  static async generateAnswer(query: string, chunks: any[]): Promise<string> {
+    try {
+      if (chunks.length === 0) {
+        return "I'm sorry, I couldn't find any relevant information in my blog posts to answer that question. Try asking about RAG, LLM Agents, or Next.js development!";
+      }
+
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      const context = chunks.map((c, i) => `[Source ${i+1}: ${c.title}]\n${c.content}`).join("\n\n---\n\n");
+      
+      const prompt = `You are the AI brain behind "Sudo Make Me Sandwich", a technical blog by Sunando Bhattacharya.
+Your task is to answer the USER QUERY using the provided CONTEXT from my blog posts.
+
+Rules:
+1. Use ONLY the provided context. If the answer isn't there, say you don't know based on the blog.
+2. Cite your sources using [Source 1], [Source 2], etc.
+3. Keep the tone professional, technical, yet conversational.
+4. Use Markdown for formatting (bolding, lists, code snippets).
+5. If the query is just a greeting, respond politely and invite them to ask a technical question about the blog.
+
+USER QUERY: "${query}"
+
+CONTEXT:
+${context}
+
+Generate the response:`;
+
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    } catch (err: any) {
+      console.error("❌ [EmbeddingService] Answer generation error:", err.message);
+      return "I encountered an error trying to generate an answer. Please try again or check the posts directly.";
+    }
+  }
 }
