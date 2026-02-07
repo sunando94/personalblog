@@ -179,8 +179,12 @@ const PRESETS: Record<string, any> = {
     return () => {
       isCancelled = true;
       observer.disconnect();
-      // Cleanup all React roots
-      rootsRef.current.forEach((root) => root.unmount());
+      // Cleanup all React roots safely
+      rootsRef.current.forEach((root) => {
+          setTimeout(() => {
+              root.unmount();
+          }, 0);
+      });
       rootsRef.current.clear();
     };
   }, [content]);
