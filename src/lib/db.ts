@@ -149,6 +149,34 @@ export async function initDb() {
           );
         `);
 
+        // Page Analytics Table
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS page_analytics (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            path TEXT NOT NULL,
+            session_id TEXT,
+            user_agent TEXT,
+            referrer TEXT,
+            dwell_time_seconds INTEGER DEFAULT 0,
+            visitor_id TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS page_analytics_path_idx ON page_analytics(path);
+          CREATE INDEX IF NOT EXISTS page_analytics_created_at_idx ON page_analytics(created_at);
+        `);
+
+        // Daily Analytics Summary (for storage optimization)
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS analytics_daily_summary (
+            date DATE NOT NULL,
+            path TEXT NOT NULL,
+            total_views INTEGER DEFAULT 0,
+            unique_visitors INTEGER DEFAULT 0,
+            avg_dwell_time NUMERIC(10, 2) DEFAULT 0,
+            PRIMARY KEY (date, path)
+          );
+        `);
+
         // Document Chunks Table for Hybrid Search
         await client.query(`
           CREATE TABLE IF NOT EXISTS post_chunks (

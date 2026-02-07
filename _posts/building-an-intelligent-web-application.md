@@ -8,6 +8,7 @@ author:
 coverImage: /assets/blog/full-stack-ai-architecture.png
 ogImage:
   url: /assets/blog/full-stack-ai-architecture.png
+keywords: ["Next.js", "WebGPU", "RAG", "AI", "Architecture", "Vector Database", "Postgres", "Redis"]
 ---
 
 > **Foreword**: You are about to read a technical manifesto. This is not a tutorial. It is a documentation of a philosophy. We are moving from the "Static Web" to the "Intelligent Web", and this requires a fundamental rethinking of how we engineer software. If you are here for a quick copy-paste solution, turn back now. If you are here to understand the *soul* of modern AI engineering, welcome.

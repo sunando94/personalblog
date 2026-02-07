@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/mastering-system-prompts-and-temperature/cover.png"
+keywords: ["System Prompts", "Temperature", "LLM Control", "Prompt Engineering", "AI Behavior", "Chatbot Design", "AI Configuration"]
 ---
 
 # Mastering System Prompts and Temperature: A Guide to Controlling LLMs

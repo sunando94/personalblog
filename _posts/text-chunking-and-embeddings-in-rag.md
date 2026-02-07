@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/text-chunking-and-embeddings-in-rag/cover.png"
+keywords: ["Text Chunking", "Embeddings", "RAG", "Data Preparation", "Semantic Collision", "Parent-Child Retrieval", "Vector Search", "Recursive Splitter"]
 releaseDate: "04/02/2026"
 ---
 

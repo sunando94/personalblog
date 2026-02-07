@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/improving-and-evaluating-prompts/cover.png"
+keywords: ["Prompt Engineering", "Prompt Evaluation", "AI Evaluation", "Testing AI", "Prompt Evaluation Pipeline", "LLM Reliability", "Automated Testing"]
 ---
 # Improving and Evaluating Prompts
 

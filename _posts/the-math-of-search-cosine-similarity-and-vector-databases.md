@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/the-math-of-search-cosine-similarity-and-vector-databases/cover.png"
+keywords: ["Vector Search", "Cosine Similarity", "HNSW", "IVF-PQ", "Vector Database", "ANN Algorithms", "High-Dimensional Geometry", "Search Math"]
 releaseDate: "04/02/2026"
 ---
 

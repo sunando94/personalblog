@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/mastering-agentic-workflows/cover.png"
+keywords: ["Agentic Workflows", "AI Agents", "Cursor IDE", "Antigravity", "Coding Standards", "AI Skills", "Automated Workflows", "Developer Productivity"]
 releaseDate: "07/02/2026"
 ---
 

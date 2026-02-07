@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/deploying-mcp-to-vercel/cover.png"
+keywords: ["MCP", "Model Context Protocol", "Vercel", "Serverless", "SSE", "Server-Sent Events", "TypeScript", "Edge Runtime", "AI Agents", "Infrastructure"]
 releaseDate: "2026-02-07"
 ---
 

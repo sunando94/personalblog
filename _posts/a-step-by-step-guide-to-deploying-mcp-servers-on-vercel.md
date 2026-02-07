@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/a-step-by-step-guide-to-deploying-mcp-servers-on-vercel/cover.png"
+keywords: ["MCP", "Model Context Protocol", "Vercel", "Edge Computing", "IPv6", "Serverless", "TypeScript", "AI Agents", "LLM Tooling"]
 releaseDate: "2026-02-08"
 ---
 

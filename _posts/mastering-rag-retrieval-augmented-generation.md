@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/mastering-rag-retrieval-augmented-generation/cover.png"
+keywords: ["RAG", "Retrieval Augmented Generation", "Vector Database", "Context Window", "Information Retrieval", "LLM Architecture", "AI Systems"]
 ---
 
 # Part 1: Mastering RAG — Handling Documents Too Big for Your Prompt
