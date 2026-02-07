@@ -12,7 +12,6 @@ import "highlight.js/styles/github-dark.css";
 import "./globals.css";
 
 import { SiteTracker } from "./_components/site-tracker";
-import { NewsletterModal } from "./_components/newsletter-modal";
 import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -99,7 +98,6 @@ export default function RootLayout({
         <div className="min-h-screen">{children}</div>
         <Footer />
         <GlobalAssistant />
-        <NewsletterModal />
         <Analytics />
       </body>
     </html>
