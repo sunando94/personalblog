@@ -193,6 +193,17 @@ export async function initDb() {
           CREATE INDEX IF NOT EXISTS post_chunks_fts_idx ON post_chunks USING GIN(fts);
         `);
 
+        // Newsletter Subscribers Table
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            email TEXT UNIQUE NOT NULL,
+            status TEXT DEFAULT 'active',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS newsletter_subscribers_email_idx ON newsletter_subscribers(email);
+        `);
+
         await client.query('COMMIT');
         isInitialized = true;
         console.log("✅ Database schema is up to date.");
