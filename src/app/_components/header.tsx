@@ -129,6 +129,7 @@ const Header = () => {
               <NavLink href="/">Home</NavLink>
               <NavLink href="/posts">Posts</NavLink>
               <NavLink href="/portfolio">Portfolio</NavLink>
+              <NavLink href="/mcp">MCP Hub</NavLink>
               <NavLink href="/browser-writer">Contribute</NavLink>
             </nav>
 

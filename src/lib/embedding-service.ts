@@ -212,7 +212,7 @@ export class EmbeddingService {
 
       // 2. Reranking using LLM
       console.log(`⚖️ [EmbeddingService] Reranking ${searchRes.rows.length} candidates...`);
-      const rerankerModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const rerankerModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }, { apiVersion: "v1beta" });
       
       const candidates = searchRes.rows.map((r, i) => `ID: ${i}\nTITLE: ${r.metadata?.title}\nCONTENT: ${r.content.substring(0, 300)}...`).join("\n\n---\n\n");
       
@@ -270,7 +270,7 @@ Example: [2, 0, 5]`;
         return "I'm sorry, I couldn't find any relevant information in my blog posts to answer that question. Try asking about RAG, LLM Agents, or Next.js development!";
       }
 
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }, { apiVersion: "v1beta" });
       
       const context = chunks.map((c, i) => `[Source ${i+1}: ${c.title}]\n${c.content}`).join("\n\n---\n\n");
       
@@ -278,11 +278,11 @@ Example: [2, 0, 5]`;
 Your task is to answer the USER QUERY using the provided CONTEXT from my blog posts.
 
 Rules:
-1. Use ONLY the provided context. If the answer isn't there, say you don't know based on the blog.
-2. Cite your sources using [Source 1], [Source 2], etc.
-3. Keep the tone professional, technical, yet conversational.
-4. Use Markdown for formatting (bolding, lists, code snippets).
-5. If the query is just a greeting, respond politely and invite them to ask a technical question about the blog.
+1. Use ONLY the provided context.
+2. Cite sources [Source 1], [Source 2], etc.
+3. BREVITY IS CRITICAL: Limit your response to 1-3 sentences total (max 50 words). Give a high-level summary.
+4. Use Markdown for formatting.
+5. If you don't have enough context to answer, respond with "I'm sorry, I couldn't find any relevant information in my blog posts to answer that question. Try asking about RAG, LLM Agents, or Next.js development!"
 
 USER QUERY: "${query}"
 
