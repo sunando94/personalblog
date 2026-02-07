@@ -45,6 +45,8 @@ I wanted to build something different. I wanted to build a **Full-Stack Cognitiv
 
 This document is the blueprint of that architecture. It is the story of how we built a mind out of silicon and code.
 
+<div class="rag-simulator" data-title="Next.js Architecture Simulator" data-preset="rag-nextjs"></div>
+
 ---
 
 # Part II: The Foundation (The Silicon & The Code)

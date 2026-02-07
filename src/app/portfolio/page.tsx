@@ -2,6 +2,7 @@
 import Container from "@/app/_components/container";
 import { Metadata } from "next";
 import Link from "next/link";
+import { ProjectCard } from "@/app/_components/project-card";
 
 export const metadata: Metadata = {
   title: "Portfolio | Sunando Bhattacharya",
@@ -30,25 +31,45 @@ export default function Portfolio() {
       description: "Built a high-scale hybrid retrieval system using Reciprocal Rank Fusion, combining BM25 and Vector Search for precise enterprise knowledge retrieval.",
       tags: ["RAG", "Vector Search", "Gemini", "Pinecone"],
       link: "/posts/production-rag-master-class-the-final-blueprint",
+      techStackDetailed: [
+        "Python 3.10", "LangChain", "OpenAI Embeddings", "Pinecone Vector DB", "PostgreSQL (pgvector)", "Reciprocal Rank Fusion", "FastAPI"
+      ],
+      challenge: "Standard vector search was failing on domain-specific keyword queries (e.g., 'Error 503'), leading to hallucinations.",
+      solution: "Implemented a Hybrid Search architecture that fuses dense vector retrieval with sparse keyword search (BM25), re-ranked by a Cross-Encoder model. Improved top-5 retrieval accuracy by 40%."
     },
     {
       title: "Agentic Code Studio",
       description: "Developed an autonomous multi-agent coding assistant capable of planning, writing, and reviewing code with human-in-the-loop oversight.",
       tags: ["AI Agents", "Anthropic", "Python", "Tool Use"],
       link: "/posts/mastering-agentic-workflows-taking-your-ai-development-to-the-next-level",
+      techStackDetailed: [
+        "Anthropic Claude 3.5 Sonnet", "Custom Tool Defs (MCP)", "Next.js 14", "Python Backend", "WebSockets"
+      ],
+      challenge: "Single-turn LLM interactions were insufficient for complex, multi-file software engineering tasks.",
+      solution: "Designed a Planner-Executor-Reviewer agent workflow. The Planner decomposes tasks, the Executor uses file system tools to write code, and the Reviewer runs lint/test checks before committing."
     },
     {
       title: "Databricks Migration Suite",
       description: "Led the architectural migration of legacy on-demand clusters and EMR workloads to optimized Databricks Unity Catalog environments.",
       tags: ["Databricks", "Spark", "Cloud Migration", "Scala"],
-      link: "#", // Placeholder or link to a case study post if you write one
+      link: "#", 
+      techStackDetailed: [
+        "Scala 2.12", "Apache Spark 3.3", "Delta Lake", "Unity Catalog", "AWS EMR", "Terraform"
+      ],
+      challenge: "Client was facing 4-hour SLA breaches daily due to unoptimized legacy Hive jobs running on transient EMR clusters.",
+      solution: "Re-architected the pipeline to use Databricks Photon engine and Delta Lake. Implemented Z-Ordering for faster data skipping, reducing runtime by 65% and costs by 40%."
     },
     {
       title: "CDC Framework",
       description: "Pioneered a Change Data Capture (CDC) framework for event-driven architectures using Apache Kafka and Spark Structured Streaming.",
       tags: ["Kafka", "Streaming", "Event-Driven", "Java"],
       link: "#",
-    },
+      techStackDetailed: [
+        "Apache Kafka", "Spark Structured Streaming", "Java 11", "Debezium", "Avro Schema Registry"
+      ],
+      challenge: "Batch ETL jobs were delivering data with T-1 latency, making real-time fraud detection impossible.",
+      solution: "Built a real-time CDC pipeline using Debezium and Kafka. Consumed streams via Spark Structured Streaming with micro-batch processing (500ms trigger), enabling sub-second data freshness."
+    }
   ];
 
   const experience = [
@@ -138,34 +159,7 @@ export default function Portfolio() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
             {projects.map((project, idx) => (
-              <div
-                key={idx}
-                className="group relative p-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl hover:shadow-xl transition-all duration-300 hover:-translate-y-1 block h-full flex flex-col"
-              >
-                <div className="mb-4 flex-1">
-                  <h3 className="text-xl font-bold group-hover:text-blue-600 transition-colors flex items-center gap-2">
-                    <Link href={project.link} className={project.link !== "#" ? "after:absolute after:inset-0" : ""}>
-                      {project.title}
-                    </Link>
-                    {project.link !== "#" && (
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                    )}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-                    {project.description}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-slate-800">
-                  {project.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[10px] uppercase font-bold tracking-wider text-gray-500 bg-gray-50 dark:bg-slate-800 px-2 py-1 rounded"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <ProjectCard key={idx} project={project} />
             ))}
           </div>
         </section>

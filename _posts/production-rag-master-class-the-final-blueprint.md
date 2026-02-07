@@ -20,6 +20,8 @@ We have explored the geometry of cosine similarity, the characters of BM25, the 
 
 In this final "Master Class," we will bring every single one of these concepts together into a unified framework. This is the blueprint for a production system that doesn't just work—it scales, it's cost-effective, and it is built for accuracy.
 
+<div id="rag-simulator-root"></div>
+
 ---
 
 ## The Unified Architecture: The "Golden Pipeline"
