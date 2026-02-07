@@ -22,8 +22,6 @@ Most developers begin their journey with MCP by running servers locally. You mig
 
 The core challenge of moving MCP to the cloud is the transport layer. In a local environment, the client (like Claude Desktop) and the server (your MCP script) communicate via standard input and standard output. It is a persistent, stateful connection where the process stays alive as long as the window is open. Vercel, and serverless platforms in general, operate on a completely different philosophy. They are ephemeral, request-driven, and stateless. You cannot keep a long-running process alive indefinitely without incurring massive costs or hitting platform timeouts.
 
-<div class="agent-visualizer" data-title="Deployment Agent Visualizer" data-preset="agent-deploy"></div>
-
 To bridge this gap, the Model Context Protocol defines a transport layer based on Server-Sent Events (SSE). Unlike a standard REST API where the client sends a request and waits for a single response, SSE allows the server to push updates to the client over a single HTTP connection. This is perfect for MCP because it mimics the asynchronous, two-way nature of the protocol while remaining compatible with the web's request-response architecture. When you deploy to Vercel, you are essentially creating an endpoint that negotiates these SSE connections, allowing an LLM hosted anywhere in the world to call tools and read resources from your hosted server.
 
 The following diagram illustrates the high-level flow of an MCP request in a serverless environment.

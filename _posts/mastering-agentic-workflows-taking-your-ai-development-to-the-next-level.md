@@ -18,8 +18,6 @@ If you are using tools like **Antigravity**, **Cursor**, or **Windsurf**, you ha
 
 Most developers get stuck in a "Copy-Paste-Correct" loop. To break out of this, you need to stop treatting the AI like a chatbot and start treating it like a specialized engineer who needs a clear set of SOPs (Standard Operating Procedures).
 
-<div id="agent-visualizer-root"></div>
-
 This guide walks you through the step-by-step process of configuring your agentic environment for maximum efficiency, focusing on **Rules**, **Skills**, and **Workflows**.
 
 ![Mastering Agentic Workflows](/assets/blog/mastering-agentic-workflows/cover.png)
