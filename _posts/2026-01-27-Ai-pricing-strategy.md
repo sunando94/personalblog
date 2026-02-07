@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/gemini-pricing-strategy/cover.png"
+keywords: ["AI Pricing", "Gemini Advanced", "Cursor AI", "Claude Pro", "ChatGPT Plus", "Subscription Models", "Google Gemini", "Artificial Intelligence"]
 ---
 
 The AI race isn't just about parameters anymore—it's about how much value you can get before hitting a paywall. 

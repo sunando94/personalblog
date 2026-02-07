@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/the-multi-index-architecture/cover.png"
+keywords: ["RAG Architecture", "Production RAG", "Hybrid Retrieval", "Re-ranking", "Contextual Retrieval", "System Design", "AI Scaling", "Vector Search"]
 releaseDate: "08/02/2026"
 ---
 

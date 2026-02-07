@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/rag-in-the-wild-ai-ide-indexing/cover.png"
+keywords: ["AI IDE", "Cursor", "Windsurf", "Code Indexing", "AST", "Syntax Tree", "Semantic Search", "Codebase RAG", "Developer Tools"]
 releaseDate: "06/02/2026"
 ---
 

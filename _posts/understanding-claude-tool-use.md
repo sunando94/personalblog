@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/understanding-claude-tool-use/cover.png"
+keywords: ["Claude Tool Use", "Function Calling", "AI Assistance", "JSON Schema", "Real-time Data", "Tool Definitions", "Multi-Block Messages", "Anthropic"]
 ---
 
 # Understanding Claude Tool Use

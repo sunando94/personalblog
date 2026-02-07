@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/api-rate-limits-of-free-version-llm/cover.png"
+keywords: ["Rate Limits", "LLM API", "OpenAI Free Tier", "Anthropic Free Tier", "Token Bucket Algorithm", "Leaky Bucket", "Distributed Systems", "Redis", "System Architecture"]
 releaseDate: "2026-02-12"
 ---
 

@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/advanced-control-prefilling-and-stop-sequences/cover.png"
+keywords: ["Claude AI", "Message Prefilling", "Stop Sequences", "Prompt Engineering", "AI Control", "Anthropic", "JSON Formatting"]
 ---
 
 # Surgical Precision: How to Steer Claude with Prefills and Stop Sequences

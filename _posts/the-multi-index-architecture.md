@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/the-multi-index-architecture/cover.png"
+keywords: ["Multi-Index Architecture", "Hybrid Retrieval", "Reciprocal Rank Fusion", "RRF", "LLM Re-ranking", "Contextual Retrieval", "RAG Patterns", "Search Architecture"]
 releaseDate: "05/02/2026"
 ---
 

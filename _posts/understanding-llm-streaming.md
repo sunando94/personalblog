@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/understanding-llm-streaming/cover.png"
+keywords: ["LLM Streaming", "AI Latency", "User Experience", "Time to First Token", "TTFT", "Server-Sent Events", "Claude API", "Real-time UI"]
 ---
 
 # Understanding LLM Streaming: Making AI Feel Instant

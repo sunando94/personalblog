@@ -8,6 +8,7 @@ author:
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/beyond-semantic-search-bm25-hybrid-retrieval/cover.png"
+keywords: ["Hybrid Search", "RAG", "Semantic Search", "BM25", "Vector Database", "Information Retrieval", "Search Algorithms", "Postgres", "Reciprocal Rank Fusion"]
 releaseDate: "04/02/2026"
 ---
 
