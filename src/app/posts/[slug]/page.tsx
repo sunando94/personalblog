@@ -119,6 +119,7 @@ export async function generateMetadata(props: Params): Promise<Metadata> {
     alternates: {
       canonical: url,
     },
+    authors: [{ name: post.author?.name || "Sunando Bhattacharya" }],
   };
 }
 
