@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Logo } from "./logo";
 import { AuthModal } from "./auth-modal";
+import { BrainSearch } from "./brain-search";
 
 export function Intro() {
   const router = useRouter();
@@ -85,6 +86,9 @@ export function Intro() {
         <p className="text-base md:text-lg text-gray-600 dark:text-gray-400">
           Join me as I write about technology, life, and everything in between.
         </p>
+
+        {/* RAG Playground: Search the Brain */}
+        <BrainSearch />
       </div>
 
       {/* Social links and CTA */}
@@ -136,6 +140,16 @@ export function Intro() {
         >
           Contribute
         </button>
+
+        <Link
+          href="/mcp"
+          className="text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 font-medium transition-colors duration-200 flex items-center gap-2 group"
+        >
+          MCP Hub
+          <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </Link>
 
         <Link
           href="/posts"

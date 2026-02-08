@@ -65,3 +65,28 @@ export function getAllPostsIncludingScheduled(): Post[] {
     .sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
   return posts;
 }
+
+export function getRelatedPosts(currentSlug: string, count: number = 3): Post[] {
+  const allPosts = getAllPosts();
+  const currentPost = allPosts.find((p) => p.slug === currentSlug);
+
+  if (!currentPost) return [];
+
+  const currentKeywords = new Set(currentPost.keywords || []);
+
+  const scoredPosts = allPosts
+    .filter((post) => post.slug !== currentSlug)
+    .map((post) => {
+      const postKeywords = post.keywords || [];
+      const score = postKeywords.filter((k) => currentKeywords.has(k)).length;
+      return { post, score };
+    })
+    .sort((a, b) => b.score - a.score); // Sort by overlap score
+
+  // If no detailed overlap, just take the most recent ones
+  if (scoredPosts.length === 0 || scoredPosts[0].score === 0) {
+    return allPosts.filter((p) => p.slug !== currentSlug).slice(0, count);
+  }
+
+  return scoredPosts.slice(0, count).map((p) => p.post);
+}

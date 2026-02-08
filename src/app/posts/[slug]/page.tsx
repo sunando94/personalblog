@@ -1,11 +1,13 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAllPostsIncludingScheduled, getPostBySlug, getToday } from "@/lib/api";
+import { getAllPostsIncludingScheduled, getPostBySlug, getToday, getRelatedPosts } from "@/lib/api";
 import markdownToHtml from "@/lib/markdownToHtml";
 import Container from "@/app/_components/container";
 import { PostBody } from "@/app/_components/post-body";
 import { PostHeader } from "@/app/_components/post-header";
 import { ShareButtons } from "@/app/_components/share-buttons";
+import { RelatedPosts } from "@/app/_components/related-posts";
+import { TableOfContents } from "@/app/_components/table-of-contents";
 import { ScheduledPostMessage } from "@/app/_components/scheduled-post-message";
 import { Suspense } from "react";
 
@@ -16,6 +18,8 @@ export default async function Post(props: Params) {
   if (!post) {
     return notFound();
   }
+
+  const relatedPosts = getRelatedPosts(post.slug);
 
   const today = getToday();
   const isScheduled = post.releaseDate && post.releaseDate > today;
@@ -63,11 +67,23 @@ export default async function Post(props: Params) {
             date={post.date}
             author={post.author}
           />
-          <PostBody content={content} />
-          <Suspense fallback={<div className="h-20 animate-pulse bg-gray-100 dark:bg-slate-800 rounded-lg" />}>
-            <ShareButtons post={post} />
-          </Suspense>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_250px] gap-10">
+            <div className="min-w-0">
+               <PostBody content={content} />
+               <Suspense fallback={<div className="h-20 animate-pulse bg-gray-100 dark:bg-slate-800 rounded-lg" />}>
+                 <ShareButtons post={post} />
+               </Suspense>
+            </div>
+            
+            <aside className="hidden lg:block relative">
+               <TableOfContents />
+            </aside>
+          </div>
+
         </article>
+        <hr className="border-neutral-200 dark:border-slate-800 mt-28 mb-24" />
+        <RelatedPosts posts={relatedPosts} />
       </Container>
     </main>
   );

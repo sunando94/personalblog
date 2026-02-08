@@ -212,7 +212,7 @@ export class EmbeddingService {
 
       // 2. Reranking using LLM
       console.log(`⚖️ [EmbeddingService] Reranking ${searchRes.rows.length} candidates...`);
-      const rerankerModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const rerankerModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }, { apiVersion: "v1beta" });
       
       const candidates = searchRes.rows.map((r, i) => `ID: ${i}\nTITLE: ${r.metadata?.title}\nCONTENT: ${r.content.substring(0, 300)}...`).join("\n\n---\n\n");
       
@@ -258,6 +258,44 @@ Example: [2, 0, 5]`;
     } catch (err: any) {
       console.error("❌ [EmbeddingService] Search error:", err.message);
       return [];
+    }
+  }
+
+  /**
+   * Generates a cited answer based on retrieved chunks
+   */
+  static async generateAnswer(query: string, chunks: any[]): Promise<string> {
+    try {
+      if (chunks.length === 0) {
+        return "I'm sorry, I couldn't find any relevant information in my blog posts to answer that question. Try asking about RAG, LLM Agents, or Next.js development!";
+      }
+
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }, { apiVersion: "v1beta" });
+      
+      const context = chunks.map((c, i) => `[Source ${i+1}: ${c.title}]\n${c.content}`).join("\n\n---\n\n");
+      
+      const prompt = `You are the AI brain behind "Sudo Make Me Sandwich", a technical blog by Sunando Bhattacharya.
+Your task is to answer the USER QUERY using the provided CONTEXT from my blog posts.
+
+Rules:
+1. Use ONLY the provided context.
+2. Cite sources [Source 1], [Source 2], etc.
+3. BREVITY IS CRITICAL: Limit your response to 1-3 sentences total (max 50 words). Give a high-level summary.
+4. Use Markdown for formatting.
+5. If you don't have enough context to answer, respond with "I'm sorry, I couldn't find any relevant information in my blog posts to answer that question. Try asking about RAG, LLM Agents, or Next.js development!"
+
+USER QUERY: "${query}"
+
+CONTEXT:
+${context}
+
+Generate the response:`;
+
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    } catch (err: any) {
+      console.error("❌ [EmbeddingService] Answer generation error:", err.message);
+      return "I encountered an error trying to generate an answer. Please try again or check the posts directly.";
     }
   }
 }

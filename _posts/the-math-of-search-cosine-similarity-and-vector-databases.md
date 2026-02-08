@@ -22,6 +22,8 @@ The answer is a sophisticated combination of **High-Dimensional Geometry**, **Ap
 
 In traditional keyword search (lexical search), we look for exact string matches or partial overlaps. In vector search, we seek **Semantic Neighbors**. 
 
+<div class="rag-simulator" data-title="Vector Search Playground" data-preset="rag-vector"></div>
+
 Imagine a "perfect" embedding model that only returns two numbers for simplicity—a 2D vector space.
 1.  **Medical Score ($x$)**: How much the text relates to biological pathogens or clinical trials.
 2.  **Tech Score ($y$)**: How much the text relates to algorithms or cloud infrastructure.
