@@ -4,6 +4,7 @@ import path from "path";
 import dotenv from "dotenv";
 import matter from "gray-matter";
 import { fileURLToPath } from 'url';
+import { fetchUnsplashImage } from "./fetch-unsplash.mjs";
 
 // Helper to push to GitHub with dynamic branch support
 export async function pushToGithub(content, filePath, options = {}) {
@@ -210,6 +211,16 @@ export async function generatePost(options = {}) {
   const guidelines = await fs.readFile(path.join(projectRoot, ".agent/docs/blog_post_guidelines.md"), "utf-8");
   const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
+  // Fetch Unsplash image if not provided
+  let finalCoverImage = coverImage;
+  if (!finalCoverImage && !dryRun) {
+    console.log("No cover image provided. Fetching from Unsplash...");
+    const unsplashPath = await fetchUnsplashImage(topic, slug);
+    if (unsplashPath) {
+      finalCoverImage = unsplashPath;
+    }
+  }
+
   const fillPrompt = async (name, data) => {
     let template = await fs.readFile(path.join(projectRoot, `mcp/prompts/${name}.md`), "utf-8");
     for (const [key, value] of Object.entries(data)) {
@@ -227,7 +238,7 @@ export async function generatePost(options = {}) {
     finalReleaseDate: finalReleaseDate,
     authorName,
     authorPicture,
-    coverImage
+    coverImage: finalCoverImage || ""
   });
 
   let finalContent = await generateWithFallback(unifiedPrompt, "Unified Agent");
