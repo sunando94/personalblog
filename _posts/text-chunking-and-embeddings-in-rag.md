@@ -3,6 +3,7 @@ title: "Part 2: Text Chunking and Embeddings — The Art of Data Preparation"
 date: "2026-02-02"
 excerpt: "A deep dive into document decomposition strategies—from Recursive Splitters to Parent-Child hierarchies—and the high-dimensional math of embeddings."
 coverImage: "/assets/blog/text-chunking-and-embeddings-in-rag/cover.png"
+category: "Data Engineering"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

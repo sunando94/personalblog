@@ -3,6 +3,7 @@ title: "Part 4: Beyond Semantic Search: Implementing Hybrid Retrieval with BM25"
 date: "2026-02-04"
 excerpt: "Why production RAG systems require more than just vector search, and how to implement high-precision hybrid retrieval using BM25 and Reciprocal Rank Fusion."
 coverImage: "/assets/blog/beyond-semantic-search-bm25-hybrid-retrieval/cover.png"
+category: "AI"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

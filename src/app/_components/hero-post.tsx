@@ -11,6 +11,7 @@ type Props = {
   excerpt: string;
   author: Author;
   slug: string;
+  category?: string;
 };
 
 export function HeroPost({
@@ -20,10 +21,18 @@ export function HeroPost({
   excerpt,
   author,
   slug,
+  category,
 }: Props) {
   return (
     <section className="mb-20 md:mb-28">
-      <div className="mb-8 md:mb-12 group">
+      <div className="mb-8 md:mb-12 group relative">
+        {category && (
+          <div className="absolute top-6 left-6 z-10">
+            <span className="px-4 py-2 text-sm font-bold tracking-wider uppercase bg-blue-600 text-white rounded-full shadow-2xl">
+              {category}
+            </span>
+          </div>
+        )}
         <CoverImage title={title} src={coverImage} slug={slug} />
       </div>
       <div className="md:grid md:grid-cols-2 md:gap-x-16 lg:gap-x-12">

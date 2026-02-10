@@ -51,9 +51,11 @@ export function createServer() {
           inputSchema: {
             type: "object",
             properties: {
-              topic: { type: "string", description: "The topic of the blog post." },
-              additional_context: { type: "string", description: "URL, text, or file context." },
               release_date: { type: "string", description: "YYYY-MM-DD or 'now'." },
+              category: { 
+                type: "string", 
+                description: "The primary focus. Preferred: AI, Data Engineering, Deployment." 
+              },
             },
             required: ["topic"],
           },
@@ -94,6 +96,7 @@ export function createServer() {
             topic: args.topic,
             contextInput: args.additional_context,
             releaseDateInput: args.release_date || "now",
+            category: args.category || "AI",
             mcpMode: true
           });
           const duration = ((Date.now() - startTime) / 1000).toFixed(1);

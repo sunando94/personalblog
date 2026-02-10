@@ -10,7 +10,8 @@ import path from "path";
 export async function fetchUnsplashImage(query, slug) {
   try {
     console.log(`Searching Unsplash for: "${query}"...`);
-    const searchUrl = `https://unsplash.com/napi/search/photos?query=${encodeURIComponent(query)}&per_page=1`;
+    // Fetch more results to filter out premium/watermarked ones
+    const searchUrl = `https://unsplash.com/napi/search/photos?query=${encodeURIComponent(query)}&per_page=10`;
     const res = await fetch(searchUrl);
     const data = await res.json();
 
@@ -19,8 +20,16 @@ export async function fetchUnsplashImage(query, slug) {
       return null;
     }
 
-    const imageUrl = data.results[0].urls.regular;
-    console.log(`Found image: ${imageUrl}`);
+    // Filter out premium images which often have watermarks or require subscription
+    const freeResults = data.results.filter(r => !r.premium && !r.plus);
+    
+    if (freeResults.length === 0) {
+      console.warn("No free Unsplash results found for query:", query);
+      return null;
+    }
+
+    const imageUrl = freeResults[0].urls.regular;
+    console.log(`Found free image: ${imageUrl}`);
 
     const projectRoot = process.cwd();
     const assetsDir = path.join(projectRoot, "public/assets/blog", slug);

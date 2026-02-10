@@ -115,6 +115,7 @@ export async function generatePost(options = {}) {
     authorName = process.env.AUTHOR_NAME || "Personal Blog Author",
     authorPicture = process.env.AUTHOR_PICTURE || "/assets/blog/authors/default.jpeg",
     coverImage = "",
+    category = "AI",
     dryRun = false,
     mcpMode = false
   } = options;
@@ -238,7 +239,8 @@ export async function generatePost(options = {}) {
     finalReleaseDate: finalReleaseDate,
     authorName,
     authorPicture,
-    coverImage: finalCoverImage || ""
+    coverImage: finalCoverImage || "",
+    category
   });
 
   let finalContent = await generateWithFallback(unifiedPrompt, "Unified Agent");

@@ -3,6 +3,7 @@ title: "Mastering System Prompts and Temperature"
 date: "2026-01-26"
 excerpt: "Unlock the full potential of LLMs by learning how to craft effective system prompts and when to tweak the temperature parameter."
 coverImage: "/assets/blog/mastering-system-prompts-and-temperature/cover.png"
+category: "AI"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

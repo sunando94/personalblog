@@ -30,19 +30,21 @@ export function getPool(): Pool {
 
     poolInstance = new Pool({
       ...connectionConfig,
-      max: 3, // Strict limit for Aiven hobby tiers
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      max: 2, // Allow a small buffer for concurrent queries in one invocation
+      idleTimeoutMillis: 30000, // Keep connections alive for warm starts
+      connectionTimeoutMillis: 5000, // Wait reasonably for a slot
       ssl: sslConfig
     });
 
-    poolInstance.on('error', (err) => {
-      console.error('💥 Unexpected error on dormant database client', err);
-      process.exit(-1);
+    poolInstance.on('error', (err: any) => {
+      console.error('� PostgreSQL Pool Error:', err.message);
+      if (err.message.includes('SUPERUSER')) {
+        console.error('🚨 CONNECTION LIMIT REACHED: Consider using a connection pooler (e.g. Neon Pooler or PgBouncer).');
+      }
     });
 
     if (connectionConfig.host) {
-      console.log(`🐘 Database Connected: ${connectionConfig.host} (DB: ${connectionConfig.database})`);
+      console.log(`🐘 Database Connected: ${connectionConfig.host}`);
     }
   }
   return poolInstance;

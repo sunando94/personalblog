@@ -3,6 +3,7 @@ title: "Part 5: The Multi-Index Architecture: Building an Extensible Hybrid Retr
 date: "2026-02-05"
 excerpt: "A deep dive into the software engineering patterns behind high-scale RAG systems, focusing on the Multi-Index Retriever pattern, LLM Re-ranking, and Contextual Retrieval."
 coverImage: "/assets/blog/the-multi-index-architecture/cover.png"
+category: "Data Engineering"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

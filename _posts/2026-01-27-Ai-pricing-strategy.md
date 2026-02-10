@@ -3,6 +3,7 @@ title: "The AI Pricing Wars: Is Gemini’s Free Trial the Winning Move?"
 date: "2026-01-27"
 excerpt: "A comparison of subscription models between Gemini, Cursor, Claude, and OpenAI, highlighting Google's aggressive trial strategy."
 coverImage: "/assets/blog/gemini-pricing-strategy/cover.png"
+category: "AI"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

@@ -3,6 +3,7 @@ title: "Advanced AI Control: Prefilling and Stop Sequences"
 date: "2026-01-26"
 excerpt: "Learn how to literally put words in Claude's mouth and give it a 'safe word' to stop talking exactly when you want."
 coverImage: "/assets/blog/advanced-control-prefilling-and-stop-sequences/cover.png"
+category: "AI"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

@@ -11,6 +11,7 @@ type Props = {
   excerpt: string;
   author: Author;
   slug: string;
+  category?: string;
 };
 
 export function PostPreview({
@@ -20,10 +21,18 @@ export function PostPreview({
   excerpt,
   author,
   slug,
+  category,
 }: Props) {
   return (
     <div className="p-6">
-      <div className="mb-5 overflow-hidden rounded-lg">
+      <div className="mb-5 overflow-hidden rounded-lg relative">
+        {category && (
+          <div className="absolute top-4 left-4 z-10">
+            <span className="px-3 py-1 text-xs font-bold tracking-wider uppercase bg-blue-600 text-white rounded-full shadow-lg">
+              {category}
+            </span>
+          </div>
+        )}
         <CoverImage slug={slug} title={title} src={coverImage} />
       </div>
       <h3 className="text-2xl mb-3 leading-snug font-bold">
