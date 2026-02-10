@@ -21,6 +21,7 @@ export default function Index() {
             date={heroPost.date}
             author={heroPost.author}
             slug={heroPost.slug}
+            category={heroPost.category}
             excerpt={heroPost.excerpt}
           />
         )}

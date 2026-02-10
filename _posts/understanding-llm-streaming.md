@@ -3,6 +3,7 @@ title: "Understanding LLM Streaming: Making AI Feel Instant"
 date: "2026-01-26"
 excerpt: "Learn how streaming works with Claude to create a responsive, 'word-by-word' user experience in your AI applications."
 coverImage: "/assets/blog/understanding-llm-streaming/cover.png"
+category: "AI"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

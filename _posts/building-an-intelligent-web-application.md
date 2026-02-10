@@ -6,6 +6,7 @@ author:
   name: Sunando
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 coverImage: /assets/blog/full-stack-ai-architecture.png
+category: "AI"
 ogImage:
   url: /assets/blog/full-stack-ai-architecture.png
 keywords: ["Next.js", "WebGPU", "RAG", "AI", "Architecture", "Vector Database", "Postgres", "Redis"]

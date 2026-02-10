@@ -22,6 +22,7 @@ Critique your own draft for:
 ### STAGE 3: SEO & FRONTMATTER
 Finalize the post with a technical title and a 2-sentence expert excerpt.
 Ensure the frontmatter follows this EXACT schema. 
+CAT_LIST: Choose the most relevant category. Preferred: ["AI", "Data Engineering", "Deployment"].
 CRITICAL: You MUST leave 'coverImage' and 'ogImage.url' as empty strings "". Do NOT hallucinate paths.
 
 ---
@@ -29,6 +30,7 @@ title: "Technical Catchy Title"
 date: "{{today}}"
 excerpt: "Two sentence expert summary."
 coverImage: "{{coverImage}}" 
+category: "{{category}}"
 author: { name: "{{authorName}}", picture: "{{authorPicture}}" }
 ogImage: { url: "{{coverImage}}" } 
 releaseDate: "{{finalReleaseDate}}"

@@ -66,6 +66,7 @@ export default async function Post(props: Params) {
             coverImage={post.coverImage}
             date={post.date}
             author={post.author}
+            category={post.category}
           />
           
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_250px] gap-10">

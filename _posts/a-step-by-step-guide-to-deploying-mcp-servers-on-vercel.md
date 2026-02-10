@@ -3,6 +3,7 @@ title: "Deploying MCP Servers on Vercel: A Masterclass in Edge-Ready Tooling"
 date: "2026-02-06"
 excerpt: "Learn how to bridge the gap between LLMs and your private data by deploying Model Context Protocol servers on Vercel's global infrastructure. This guide covers everything from basic tool definition to advanced streaming transport implementations."
 coverImage: "/assets/blog/a-step-by-step-guide-to-deploying-mcp-servers-on-vercel/cover.png"
+category: "Deployment"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

@@ -1,4 +1,5 @@
 import { type Author } from "./author";
+import { Category } from "../lib/constants";
 
 export type Post = {
   slug: string;
@@ -14,4 +15,5 @@ export type Post = {
   preview?: boolean;
   releaseDate?: string;
   keywords?: string[];
+  category?: Category;
 };

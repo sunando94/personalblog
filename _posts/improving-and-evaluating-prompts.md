@@ -3,6 +3,7 @@ title: "Improving and Evaluating Prompts"
 date: "2026-01-29"
 excerpt: "Prompt engineering is an art, but prompt evaluation is the science that makes it reliable. Learn how to move from guesswork to systematic measurement."
 coverImage: "/assets/blog/improving-and-evaluating-prompts/cover.png"
+category: "AI"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

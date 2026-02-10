@@ -3,6 +3,7 @@ title: "Part 1: Mastering RAG — Handling Documents Too Big for Your Prompt"
 date: "2026-02-01"
 excerpt: "An architectural deep-dive into Retrieval Augmented Generation, solving the 'Lost in the Middle' problem with high-scale Information Retrieval."
 coverImage: "/assets/blog/mastering-rag-retrieval-augmented-generation/cover.png"
+category: "AI"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"

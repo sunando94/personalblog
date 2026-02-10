@@ -35,6 +35,7 @@ export function RecentPosts({ posts }: Props) {
               date={post.date}
               author={post.author}
               slug={post.slug}
+              category={post.category}
               excerpt={post.excerpt}
             />
           </div>

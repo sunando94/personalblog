@@ -3,6 +3,7 @@ title: "Scaling Intelligence: A Production Guide to Deploying MCP to Vercel"
 date: "2026-02-06"
 excerpt: "Transitioning Model Context Protocol servers from local development to production environments requires a robust serverless strategy. This guide explores how to bridge the gap between local stdio protocols and the web-based transport layers necessary for Vercel deployments."
 coverImage: "/assets/blog/deploying-mcp-to-vercel/cover.png"
+category: "Deployment"
 author:
   name: Sunando Bhattacharya
   picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
