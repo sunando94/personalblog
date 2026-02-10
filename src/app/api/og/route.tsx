@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
             flexDirection: "column",
             alignItems: "flex-start",
             justifyContent: "center",
-            backgroundColor: "#020617", // slate-950
+            backgroundColor: "#020617",
             backgroundImage: "radial-gradient(circle at 25px 25px, rgba(255, 255, 255, 0.05) 2%, transparent 0%)",
             backgroundSize: "50px 50px",
             padding: "80px",
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
               </svg>
             </div>
-            <span style={{ fontSize: "28px", fontWeight: "bold", color: "#94a3b8", letterSpacing: "1px" }}>
+            <span style={{ display: "flex", fontSize: "28px", fontWeight: "bold", color: "#94a3b8", letterSpacing: "1px" }}>
               Bhattacharya.ai // Engineering
             </span>
           </div>
@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
           {/* Title */}
           <div
             style={{
+              display: "flex",
               fontSize: "72px",
               fontWeight: 900,
               lineHeight: 1.1,
@@ -62,8 +63,6 @@ export async function GET(req: NextRequest) {
               marginBottom: "32px",
               background: "linear-gradient(to bottom right, #ffffff, #94a3b8)",
               backgroundClip: "text",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
               maxWidth: "1000px",
             }}
           >
@@ -73,14 +72,12 @@ export async function GET(req: NextRequest) {
           {/* Excerpt */}
           <div
             style={{
+              display: "flex",
               fontSize: "32px",
               lineHeight: 1.4,
               color: "#94a3b8",
               marginBottom: "60px",
               maxWidth: "900px",
-              display: "-webkit-box",
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
           >
@@ -89,11 +86,12 @@ export async function GET(req: NextRequest) {
 
           {/* Footer / Tech Stack */}
           <div style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "flex-end", marginTop: "auto" }}>
-            <div style={{ display: "flex", gap: "12px" }}>
-              {keywords.slice(0, 5).map((word) => (
+            <div style={{ display: "flex" }}>
+              {keywords.slice(0, 5).map((word, i) => (
                 <div
                   key={word}
                   style={{
+                    display: "flex",
                     backgroundColor: "rgba(255, 255, 255, 0.05)",
                     border: "1px solid rgba(255, 255, 255, 0.1)",
                     borderRadius: "8px",
@@ -101,20 +99,20 @@ export async function GET(req: NextRequest) {
                     color: "#60a5fa",
                     fontSize: "20px",
                     fontWeight: "600",
+                    marginRight: i === 4 ? 0 : "12px",
                   }}
-                >
-                  {word}
-                </div>
+                >{word}</div>
               ))}
             </div>
             
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                {date && (
-                <div style={{ fontSize: "20px", color: "#475569", marginBottom: "8px", fontWeight: "bold" }}>
+                <div style={{ display: "flex", fontSize: "20px", color: "#475569", marginBottom: "8px", fontWeight: "bold" }}>
                     RELEASED {date}
                 </div>
                )}
                <div style={{ 
+                display: "flex",
                 border: "2px solid #ef4444", 
                 color: "#ef4444", 
                 borderRadius: "4px", 
@@ -123,9 +121,7 @@ export async function GET(req: NextRequest) {
                 fontWeight: "bold",
                 transform: "rotate(-5deg)",
                 letterSpacing: "2px"
-               }}>
-                 PROVEN WORK
-               </div>
+               }}>PROVEN WORK</div>
             </div>
           </div>
         </div>
