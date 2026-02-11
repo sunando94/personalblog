@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
         const profileData = await profileResponse.json();
         const userId = profileData.sub;
-        const authorUrn = `urn:li:person:${userId}`;
+        const authorUrn = userId.startsWith("urn:li:") ? userId : `urn:li:person:${userId}`;
 
         // 2. Format commentary: Link is always separated from your custom thoughts
         const richCommentary = commentary

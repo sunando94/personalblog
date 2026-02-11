@@ -14,6 +14,18 @@ export async function GET() {
 
     if (token) {
       try {
+        // First, check if it's our own app JWT (decoded)
+        const { getTokenPayload } = await import("@/lib/mcp-auth");
+        const payload = await getTokenPayload(`Bearer ${token}`);
+        
+        if (payload && payload.name) {
+          return NextResponse.json({
+            image: payload.picture || null,
+            name: payload.name
+          });
+        }
+
+        // Fallback: If it was a raw LinkedIn token (legacy behavior or external)
         const response = await fetch("https://api.linkedin.com/v2/userinfo", {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -28,7 +40,7 @@ export async function GET() {
           });
         }
       } catch (error) {
-        console.error("LinkedIn userinfo error:", error);
+        console.error("LinkedIn profile resolution error:", error);
       }
     }
 

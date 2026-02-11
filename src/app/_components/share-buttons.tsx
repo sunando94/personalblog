@@ -15,7 +15,6 @@ export function ShareButtons({ post }: Props) {
   const router = useRouter();
   const [isConnected, setIsConnected] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [shareText, setShareText] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -24,6 +23,20 @@ export function ShareButtons({ post }: Props) {
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionIndex, setMentionIndex] = useState(-1);
+  const [imgError, setImgError] = useState(false);
+
+  const [shareText, setShareText] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(`share_text_${post.slug}`) || "";
+    }
+    return "";
+  });
+
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem(`share_text_${post.slug}`, shareText);
+    }
+  }, [shareText, mounted, post.slug]);
 
 
 
@@ -36,6 +49,8 @@ export function ShareButtons({ post }: Props) {
       .then(res => res.json())
       .then(data => {
         if (data.image || data.name) {
+          setIsConnected(true);
+          setImgError(false);
           setUserProfile({
             image: data.image,
             name: data.name
@@ -61,13 +76,27 @@ export function ShareButtons({ post }: Props) {
 
   useEffect(() => {
     // Check URL parameters for auth status
-    if (searchParams.get("linkedin_connected") === "true") {
+    const isConnectedParam = searchParams.get("linkedin_connected") === "true";
+    const nameParam = searchParams.get("name");
+    const pictureParam = searchParams.get("picture");
+
+    if (isConnectedParam || nameParam) {
       setIsConnected(true);
+      if (nameParam) {
+        setUserProfile(prev => ({
+          ...prev,
+          name: decodeURIComponent(nameParam),
+          image: pictureParam ? decodeURIComponent(pictureParam) : prev.image
+        }));
+      }
+      
       // Clean up URL
-      router.replace(window.location.pathname);
-      setStatusMessage({ type: "success", text: "Connected to LinkedIn! You can now share this post." });
-      // Open modal automatically after connecting
-      setTimeout(() => setShowModal(true), 500);
+      if (isConnectedParam) {
+        router.replace(window.location.pathname);
+        setStatusMessage({ type: "success", text: "Connected to LinkedIn! You can now share this post." });
+        // Open modal automatically after connecting
+        setTimeout(() => setShowModal(true), 500);
+      }
     } else if (searchParams.get("linkedin_error")) {
       setStatusMessage({ type: "error", text: `LinkedIn Connection Failed: ${searchParams.get("linkedin_error")}` });
     }
@@ -132,6 +161,7 @@ export function ShareButtons({ post }: Props) {
       setStatusMessage({ type: "success", text: "Successfully posted to LinkedIn!" });
       setShowModal(false);
       setShareText("");
+      localStorage.removeItem(`share_text_${post.slug}`);
     } catch (error) {
       console.error("Share error:", error);
       setStatusMessage({ type: "error", text: "Failed to share post. Please try again." });
@@ -159,15 +189,16 @@ export function ShareButtons({ post }: Props) {
             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  {(userProfile.image || post.author.picture) ? (
+                  {((isConnected ? userProfile.image : post.author.picture) && !imgError) ? (
                     <img
-                      src={userProfile.image || post.author.picture}
-                      alt="Your Profile"
+                      src={(isConnected ? userProfile.image : post.author.picture) || ""}
+                      alt="Profile"
                       className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-slate-700"
+                      onError={() => setImgError(true)}
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 font-bold">
-                      {(userProfile.name || post.author.name || "U")[0]}
+                      {(isConnected ? userProfile.name : post.author.name || "U")?.[0]}
                     </div>
                   )}
                 </div>
