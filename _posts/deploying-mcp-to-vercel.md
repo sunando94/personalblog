@@ -161,52 +161,28 @@ Now comes the crucial part: exposing this server over HTTP using Vercel's Route 
 Vercel's Edge Runtime is often preferred for these types of tasks because of its lower latency and faster cold starts. However, if your MCP tools rely on heavy Node.js libraries that aren't Edge-compatible, the standard Serverless Node.js runtime is perfectly fine.
 
 ```typescript
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { mcpServer } from "@/lib/mcp/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-/**
- * This map stores active transports. 
- * In a distributed serverless environment, you should ideally move 
- * the session state to a shared store like Redis if sessions 
- * need to persist across different function invocations.
- */
-const transports = new Map<string, SSEServerTransport>();
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const sessionId = searchParams.get("sessionId") || Math.random().toString(36).substring(7);
-
-  const transport = new SSEServerTransport(
-    `/api/mcp?sessionId=${sessionId}`,
-    NextResponse.next()
-  );
-
-  transports.set(sessionId, transport);
-  
-  // We need to handle the connection close to prevent memory leaks
-  transport.onclose = () => {
-    transports.delete(sessionId);
-  };
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    enableJsonResponse: true,
+  });
 
   await mcpServer.connect(transport);
-
-  // Return the SSE stream to the client
-  return (transport as any).handleSseRequest(request);
+  return await transport.handleRequest(request);
 }
 
 export async function POST(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const sessionId = searchParams.get("sessionId");
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    enableJsonResponse: true,
+  });
 
-  if (!sessionId || !transports.has(sessionId)) {
-    return new NextResponse("Session not found", { status: 404 });
-  }
-
-  const transport = transports.get(sessionId)!;
-  await transport.handlePostRequest(request as any, NextResponse.next() as any);
-  
-  return new NextResponse("Accepted", { status: 202 });
+  await mcpServer.connect(transport);
+  return await transport.handleRequest(request);
 }
 ```
 

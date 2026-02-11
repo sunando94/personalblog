@@ -1,21 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Post } from "@/interfaces/post";
 import { PostListPreview } from "./post-list-preview";
 
 type Props = {
     allPosts: Post[];
+    categories?: string[];
 };
 
-export function PaginatedPostList({ allPosts }: Props) {
+export function PaginatedPostList({ allPosts, categories }: Props) {
     const [currentPage, setCurrentPage] = useState(1);
     const [postsPerPage, setPostsPerPage] = useState(5);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-    const totalPages = Math.ceil(allPosts.length / postsPerPage);
+    const filteredPosts = useMemo(() => {
+        if (!selectedCategory) return allPosts;
+        return allPosts.filter(post => post.category === selectedCategory);
+    }, [allPosts, selectedCategory]);
+
+    const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
     const indexOfLastPost = currentPage * postsPerPage;
     const indexOfFirstPost = indexOfLastPost - postsPerPage;
-    const currentPosts = allPosts.slice(indexOfFirstPost, indexOfLastPost);
+    const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
 
     const paginate = (pageNumber: number) => {
         setCurrentPage(pageNumber);
@@ -28,6 +35,11 @@ export function PaginatedPostList({ allPosts }: Props) {
         }
     };
 
+    const handleCategoryClick = (category: string | null) => {
+        setSelectedCategory(category);
+        setCurrentPage(1);
+    };
+
     const handlePostsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setPostsPerPage(Number(e.target.value));
         setCurrentPage(1);
@@ -35,27 +47,63 @@ export function PaginatedPostList({ allPosts }: Props) {
 
     return (
         <div>
-            <div id="post-list-top" className="scroll-mt-24" />
-            <div className="flex flex-col gap-8 mb-16">
-                {currentPosts.map((post) => (
-                    <div
-                        key={post.slug}
-                        className="group bg-white dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600"
+            {categories && (
+                <div className="flex flex-wrap gap-2 mb-12 items-center">
+                    <span className="text-sm font-bold text-gray-500 dark:text-gray-400 mr-2 uppercase tracking-widest">
+                        Categories:
+                    </span>
+                    <button
+                        onClick={() => handleCategoryClick(null)}
+                        className={`px-4 py-1.5 text-xs font-semibold rounded-full border transition-all duration-200 ${!selectedCategory
+                                ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                : "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
+                            }`}
                     >
-                        <PostListPreview
-                            title={post.title}
-                            coverImage={post.coverImage}
-                            date={post.date}
-                            author={post.author}
-                            slug={post.slug}
-                            category={post.category}
-                            excerpt={post.excerpt}
-                        />
-                    </div>
-                ))}
-            </div>
+                        All
+                    </button>
+                    {categories.map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => handleCategoryClick(cat)}
+                            className={`px-4 py-1.5 text-xs font-semibold rounded-full border transition-all duration-200 ${selectedCategory === cat
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                    : "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
+                                }`}
+                        >
+                            {cat}
+                        </button>
+                    ))}
+                </div>
+            )}
 
-            {allPosts.length > 5 && (
+            <div id="post-list-top" className="scroll-mt-24" />
+            
+            {filteredPosts.length > 0 ? (
+                <div className="flex flex-col gap-8 mb-16">
+                    {currentPosts.map((post) => (
+                        <div
+                            key={post.slug}
+                            className="group bg-white dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600"
+                        >
+                            <PostListPreview
+                                title={post.title}
+                                coverImage={post.coverImage}
+                                date={post.date}
+                                author={post.author}
+                                slug={post.slug}
+                                category={post.category}
+                                excerpt={post.excerpt}
+                            />
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="py-20 text-center bg-gray-50 dark:bg-slate-900 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-800 mb-16">
+                    <p className="text-gray-500 dark:text-gray-400 font-medium italic">No posts found in this category.</p>
+                </div>
+            )}
+
+            {filteredPosts.length > 0 && totalPages > 1 && (
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 py-8 border-t border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50 rounded-xl px-6 mb-20">
                     <div className="flex items-center gap-4">
                         <span className="text-sm font-medium text-gray-500 dark:text-gray-400">

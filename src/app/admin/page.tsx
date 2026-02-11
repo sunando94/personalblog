@@ -538,16 +538,16 @@ function AdminPanelContent() {
                       <div className="h-64 flex items-end gap-2">
                         {analytics.recentActivity.map((item: any, i: number) => {
                           const max = Math.max(...analytics.recentActivity.map((a: any) => parseInt(a.views)));
-                          const height = (parseInt(item.views) / max) * 100;
+                          const height = max > 0 ? (parseInt(item.views) / max) * 100 : 0;
                           return (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-lg relative overflow-hidden group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/20 transition-colors">
+                            <div key={i} className="flex-1 h-full flex flex-col items-center gap-2 group">
+                               <div className="w-full flex-1 bg-slate-100 dark:bg-slate-800 rounded-lg relative overflow-hidden group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/20 transition-colors">
                                   <div 
                                     className="absolute bottom-0 left-0 right-0 bg-indigo-500 rounded-lg transition-all duration-1000"
                                     style={{ height: `${height}%` }}
                                   ></div>
                                </div>
-                               <span className="text-[9px] font-bold text-slate-400">{new Date(item.hour).getHours()}h</span>
+                               <span className="text-[9px] font-bold text-slate-400 whitespace-nowrap">{new Date(item.hour).getHours()}h</span>
                             </div>
                           );
                         })}

@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${redirectUri}?mock=true&name=${encodeURIComponent(mockProfile.name)}&id=${mockProfile.id}&state=${encodeURIComponent(returnTo)}`);
   }
 
-  const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(returnTo)}&scope=openid%20profile%20email`;
+  const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(returnTo)}&scope=openid%20profile%20email%20w_member_social`;
 
   return NextResponse.redirect(linkedinAuthUrl);
 }

@@ -72,6 +72,18 @@ export async function GET(req: NextRequest) {
   // Redirect back to request origin (state) or profile
   const returnTo = searchParams.get("state") || "/profile";
   
-  // We pass the token in URL params so the client page can grab it
-  return NextResponse.redirect(`${origin}${returnTo}?token=${authData.access_token}&name=${encodeURIComponent(authData.name)}&picture=${encodeURIComponent(authData.picture || "")}`);
+  // Create response
+  const response = NextResponse.redirect(`${origin}${returnTo}${returnTo.includes('?') ? '&' : '?'}linkedin_connected=true&token=${authData.access_token}&name=${encodeURIComponent(authData.name)}&picture=${encodeURIComponent(authData.picture || "")}`);
+  
+  // Set the access token cookie for the sharing API
+  // Use a long expiration to keep the user connected
+  response.cookies.set("linkedin_access_token", authData.access_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+    path: "/",
+  });
+
+  return response;
 }
