@@ -210,8 +210,10 @@ export class EmbeddingService {
 
       if (searchRes.rows.length === 0) return [];
 
+      console.log(`⚖️ [EmbeddingService] Found ${searchRes.rows.length} hybrid candidates.`);
+      
       // 2. Reranking using LLM
-      console.log(`⚖️ [EmbeddingService] Reranking ${searchRes.rows.length} candidates...`);
+      console.log(`⚖️ [EmbeddingService] Reranking candidates for: "${query}"...`);
       const rerankerModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }, { apiVersion: "v1beta" });
       
       const candidates = searchRes.rows.map((r, i) => `ID: ${i}\nTITLE: ${r.metadata?.title}\nCONTENT: ${r.content.substring(0, 300)}...`).join("\n\n---\n\n");
@@ -232,22 +234,25 @@ Example: [2, 0, 5]`;
         const orderedIdsMatched = text.match(/\[(\d+,\s*)*\d+\]/);
         if (orderedIdsMatched) {
            const orderedIds = JSON.parse(orderedIdsMatched[0]);
+           console.log(`✅ [EmbeddingService] Reranked order:`, orderedIds);
            const reranked = orderedIds.slice(0, limit).map((id: number) => {
              const row = searchRes.rows[id];
+             if (!row) return null;
              return {
                slug: row.slug,
                title: row.metadata?.title,
                content: row.content,
                score: row.combined_score
              };
-           });
+           }).filter(Boolean);
            return reranked;
         }
-      } catch (rerankErr) {
-        console.error("Reranking failed, falling back to hybrid scores", rerankErr);
+      } catch (rerankErr: any) {
+        console.error("❌ [EmbeddingService] Reranking failed, falling back to hybrid:", rerankErr.message);
       }
 
       // Fallback to top hybrid matches
+      console.log(`⚠️ [EmbeddingService] Falling back to top ${limit} hybrid matches.`);
       return searchRes.rows.slice(0, limit).map(row => ({
         slug: row.slug,
         title: row.metadata?.title,
@@ -274,28 +279,32 @@ Example: [2, 0, 5]`;
       
       const context = chunks.map((c, i) => `[Source ${i+1}: ${c.title}]\n${c.content}`).join("\n\n---\n\n");
       
-      const prompt = `You are the AI brain behind "Sudo Make Me Sandwich", a technical blog by Sunando Bhattacharya.
-Your task is to answer the USER QUERY using the provided CONTEXT from my blog posts.
+    const prompt = `You are a high-fidelity RAG engine for the "Sudo Make Me Sandwich" blog.
+Your absolute goal is to answer the USER QUERY using ONLY the [CONTEXT] blocks provided.
 
-Rules:
-1. Use ONLY the provided context.
-2. Cite sources [Source 1], [Source 2], etc.
-3. BREVITY IS CRITICAL: Limit your response to 1-3 sentences total (max 50 words). Give a high-level summary.
-4. Use Markdown for formatting.
-5. If you don't have enough context to answer, respond with "I'm sorry, I couldn't find any relevant information in my blog posts to answer that question. Try asking about RAG, LLM Agents, or Next.js development!"
+STRICT RULES:
+1. INTERNAL KNOWLEDGE IS DISABLED. If it's not in the [CONTEXT], it doesn't exist.
+2. DO NOT mention "Ramda", "Iron Hand", "Rakanic", or any other external terms unless they appear in the [CONTEXT].
+3. If the [CONTEXT] refers to "The Magnum Opus", describe it EXACTLY as it is documented in the context (Next.js, WebGPU, etc.).
+4. CITE sources as [Source 1], [Source 2].
+5. BREVITY: Max 50 words.
 
-USER QUERY: "${query}"
-
-CONTEXT:
+[CONTEXT]:
 ${context}
 
-Generate the response:`;
+[USER QUERY]:
+"${query}"
 
-      const result = await model.generateContent(prompt);
-      return result.response.text();
-    } catch (err: any) {
-      console.error("❌ [EmbeddingService] Answer generation error:", err.message);
-      return "I encountered an error trying to generate an answer. Please try again or check the posts directly.";
-    }
+[FINAL ANSWER]:`;
+
+    console.log(`🤖 [EmbeddingService] Generating Answer for query: "${query}" using ${chunks.length} chunks.`);
+    const result = await model.generateContent(prompt);
+    const answer = result.response.text();
+    console.log(`📝 [EmbeddingService] Generated Answer: ${answer.substring(0, 50)}...`);
+    return answer;
+  } catch (err: any) {
+    console.error("❌ [EmbeddingService] Answer generation error:", err.message);
+    return "I encountered an error trying to generate an answer. Please try again or check the posts directly.";
+  }
   }
 }

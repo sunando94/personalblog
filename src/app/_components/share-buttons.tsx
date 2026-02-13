@@ -154,17 +154,21 @@ export function ShareButtons({ post }: Props) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to share");
+        console.error("❌ [Client] API error:", errorData);
+        const errorMessage = errorData.error || `Failed to share (Status: ${response.status})`;
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log("✅ [Client] Share successful:", data);
       setStatusMessage({ type: "success", text: "Successfully posted to LinkedIn!" });
       setShowModal(false);
       setShareText("");
       localStorage.removeItem(`share_text_${post.slug}`);
     } catch (error) {
-      console.error("Share error:", error);
-      setStatusMessage({ type: "error", text: "Failed to share post. Please try again." });
+      console.error("❌ [Client] Share error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to share post. Please try again.";
+      setStatusMessage({ type: "error", text: errorMessage });
     } finally {
       setIsSharing(false);
     }

@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   const isMock = searchParams.get("mock") === "true";
 
   let profile: ExternalProfile;
+  let linkedinAccessToken: string | null = null;
 
   if (isMock) {
     profile = {
@@ -15,6 +16,8 @@ export async function GET(req: NextRequest) {
       picture: `https://ui-avatars.com/api/?name=${searchParams.get("name")}&background=random`,
       provider: "linkedin"
     };
+    // For mock mode, we can't actually post to LinkedIn
+    linkedinAccessToken = "mock-token-cannot-post";
   } else {
     if (!code) return NextResponse.redirect(`${origin}/profile?error=no_code`);
 
@@ -42,6 +45,10 @@ export async function GET(req: NextRequest) {
         return NextResponse.redirect(`${origin}/profile?error=token_exchange_failed`);
       }
 
+      // CRITICAL: Store the LinkedIn access token for API calls
+      linkedinAccessToken = tokenData.access_token;
+      console.log("✅ [LinkedIn Auth] Received LinkedIn access token");
+
       // 2. Fetch profile using access_token (OpenID Connect userinfo endpoint)
       const userinfoResponse = await fetch("https://api.linkedin.com/v2/userinfo", {
         headers: { Authorization: `Bearer ${tokenData.access_token}` },
@@ -66,7 +73,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Create JWT for this user
+  // Create JWT for this user (for app authentication)
   const authData = await createSocialTokenPair(profile);
 
   // Redirect back to request origin (state) or profile
@@ -75,15 +82,18 @@ export async function GET(req: NextRequest) {
   // Create response
   const response = NextResponse.redirect(`${origin}${returnTo}${returnTo.includes('?') ? '&' : '?'}linkedin_connected=true&token=${authData.access_token}&name=${encodeURIComponent(authData.name)}&picture=${encodeURIComponent(authData.picture || "")}`);
   
-  // Set the access token cookie for the sharing API
-  // Use a long expiration to keep the user connected
-  response.cookies.set("linkedin_access_token", authData.access_token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-    path: "/",
-  });
+  // CRITICAL FIX: Set the LINKEDIN OAuth access token cookie (not the internal JWT)
+  // This is what the /api/share/linkedin route needs to call LinkedIn API
+  if (linkedinAccessToken) {
+    response.cookies.set("linkedin_access_token", linkedinAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 60, // 60 days (LinkedIn tokens are typically valid for 60 days)
+      path: "/",
+    });
+    console.log("✅ [LinkedIn Auth] Stored LinkedIn access token in cookie");
+  }
 
   return response;
 }

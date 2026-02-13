@@ -25,7 +25,10 @@ export async function POST(request: Request) {
         });
 
         if (!profileResponse.ok) {
-            return NextResponse.json({ error: "Failed to fetch user profile" }, { status: 401 });
+            console.error("❌ [LinkedIn Share] Failed to fetch profile:", profileResponse.status);
+            const errorText = await profileResponse.text();
+            console.error("❌ [LinkedIn Share] Profile error:", errorText);
+            return NextResponse.json({ error: "Failed to fetch user profile - token may be expired" }, { status: 401 });
         }
 
         const profileData = await profileResponse.json();
@@ -128,7 +131,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, id: shareData.id });
 
     } catch (error) {
-        console.error("LinkedIn Logic Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        console.error("❌ [LinkedIn Share] Unexpected error:", error);
+        return NextResponse.json({ 
+            error: error instanceof Error ? error.message : "Internal Server Error" 
+        }, { status: 500 });
     }
 }
