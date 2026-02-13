@@ -145,6 +145,25 @@ export default function WriterClient({ guidelines, promptTemplate, smallChatProm
     return () => { document.body.style.overflow = "auto"; };
   }, [isExpanded]);
 
+  const fetchRagContext = async (query: string) => {
+    try {
+      setGenerationStatus("Neural RAG Search...");
+      const res = await fetch("/api/assistant/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, limit: 3 }),
+      });
+      if (!res.ok) return "";
+      const chunks = await res.json();
+      if (!chunks || chunks.length === 0) return "";
+      
+      return chunks.map((c: any, i: number) => `[RELEVANT BLOG CONTEXT ${i+1}: ${c.title}]\n${c.content}`).join("\n\n---\n\n");
+    } catch (e) {
+      console.error("RAG fetch failed", e);
+      return "";
+    }
+  };
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -361,16 +380,32 @@ export default function WriterClient({ guidelines, promptTemplate, smallChatProm
           if (!activeEngine) return;
         }
 
+        const ragContext = await fetchRagContext(rawInput);
         const today = new Date().toISOString().split("T")[0];
-        const systemPrompt = promptTemplate.replace("{{posts_context}}", postsContext).replace("{{guidelines}}", guidelines).replace("{{today}}", today);
+        let systemPrompt = promptTemplate
+          .replace("{{posts_context}}", postsContext)
+          .replace("{{guidelines}}", guidelines)
+          .replace("{{today}}", today);
+
+        if (ragContext) {
+           systemPrompt += `\n\n### RELEVANT BLOG CONTEXT (RAG)\nThe following are granular chunks retrieved from the blog for the current query. PRIORITIZE THIS CONTEXT over excerpts:\n${ragContext}`;
+        }
         
         // Optimize for small models (< 1B)
         const isSmallModel = selectedModel.includes("135M") || selectedModel.includes("0.5B") || selectedModel.includes("360M");
         let finalSystemPrompt = systemPrompt;
-        
+
         if (isSmallModel) {
-          finalSystemPrompt = smallChatPrompt
-            .replace("{{today}}", today);
+          console.log("🔍 [Spark Studio] Passing RAG Context to Local Model:", ragContext?.substring(0, 100) + "...");
+          finalSystemPrompt = `You are a high-precision technical assistant for the "Sudo Make Me Sandwich" blog.
+STRICT RULE: Your memory of the external world is disabled. YOU MUST ONLY USE THE [BLOG CONTEXT] BELOW.
+If a topic is not in the [BLOG CONTEXT], say "I don't know".
+DO NOT mention "Ramda", "Iron Hand", or "Rakanic".
+
+### [BLOG CONTEXT]
+${ragContext || "No relevant blog posts found for this query."}
+---
+${smallChatPrompt.replace("{{today}}", today)}`;
         }
 
         const chatHistory = [
@@ -409,15 +444,22 @@ export default function WriterClient({ guidelines, promptTemplate, smallChatProm
         }
       } else {
         const token = localStorage.getItem("mcp_token");
-        const res = await fetch("/api/generate-blog-post", {
+        
+        // Use the dedicated Assistant Ask API for grounded RAG chat
+        const res = await fetch("/api/assistant/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({ topic: rawInput, authorName: authorInfo?.name, authorPicture: authorInfo?.picture }),
-          signal: abortControllerRef.current.signal
+          body: JSON.stringify({ query: rawInput }),
         });
+        
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-        setMessages(prev => [...prev, { role: "assistant", content: data.content }]);
+        if (!res.ok) throw new Error(data.message || data.error);
+        
+        const reply = data.answer + (data.sources?.length > 0 
+          ? `\n\n**Sources:** ${data.sources.map((s: any) => `[${s.title}](https://personalblog.vercel.app/posts/${s.slug})`).join(', ')}`
+          : '');
+          
+        setMessages(prev => [...prev, { role: "assistant", content: reply }]);
       }
     } catch (err: any) {
       setError(err.message);
@@ -435,8 +477,16 @@ export default function WriterClient({ guidelines, promptTemplate, smallChatProm
           activeEngine = await initEngine();
           if (!activeEngine) throw new Error("Engine failed to start");
         }
+        const ragContext = await fetchRagContext(topic);
         const today = new Date().toISOString().split("T")[0];
-        const systemPrompt = promptTemplate.replace("{{posts_context}}", postsContext).replace("{{guidelines}}", guidelines).replace("{{today}}", today);
+        let systemPrompt = promptTemplate
+           .replace("{{posts_context}}", postsContext)
+           .replace("{{guidelines}}", guidelines)
+           .replace("{{today}}", today);
+
+        if (ragContext) {
+          systemPrompt += `\n\n### RELEVANT BLOG CONTEXT (RAG)\nUse this context to ensure technical accuracy and avoid duplicating existing posts:\n${ragContext}`;
+        }
         
         // Optimize for small models (< 1B)
         const isSmallModel = selectedModel.includes("135M") || selectedModel.includes("0.5B") || selectedModel.includes("360M");
@@ -447,6 +497,10 @@ export default function WriterClient({ guidelines, promptTemplate, smallChatProm
             .replace("{{topic}}", topic)
             .replace("{{today}}", today)
             .replace("{{guidelines_preview}}", guidelines.substring(0, 500));
+          
+          if (ragContext) {
+            finalSystemPrompt += `\n\n### RELEVANT CONTEXT (RAG)\n${ragContext}`;
+          }
         }
 
         const chatHistory = [{ role: "system", content: finalSystemPrompt }, ...currentMessages.map((m: any) => ({ role: m.role, content: m.content })), { role: "user", content: topic }];
@@ -476,11 +530,18 @@ export default function WriterClient({ guidelines, promptTemplate, smallChatProm
         setLastContent(fullText);
         setLastFileName(fullText.match(/title:\s*"(.*)"/)?.[1]?.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".md" || `draft-${Date.now()}.md`);
       } else {
+        const ragContext = await fetchRagContext(topic);
         const token = localStorage.getItem("mcp_token");
         const res = await fetch("/api/generate-blog-post", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({ topic, authorName: authorInfo?.name, authorPicture: authorInfo?.picture, coverImage }),
+          body: JSON.stringify({ 
+            topic, 
+            context: ragContext || undefined,
+            authorName: authorInfo?.name, 
+            authorPicture: authorInfo?.picture, 
+            coverImage 
+          }),
           signal: abortControllerRef.current.signal
         });
         const data = await res.json();
@@ -618,8 +679,16 @@ export default function WriterClient({ guidelines, promptTemplate, smallChatProm
               let activeEngine = engine;
               if (!activeEngine) activeEngine = await initEngine();
               if (activeEngine) {
+                const ragContext = await fetchRagContext(rawInput);
                 const today = new Date().toISOString().split("T")[0];
-                const systemPrompt = promptTemplate.replace("{{posts_context}}", postsContext).replace("{{guidelines}}", guidelines).replace("{{today}}", today);
+                let systemPrompt = promptTemplate
+                  .replace("{{posts_context}}", postsContext)
+                  .replace("{{guidelines}}", guidelines)
+                  .replace("{{today}}", today);
+
+                if (ragContext) {
+                   systemPrompt += `\n\n### [BLOG CONTEXT] (RAG)\nSTRICT RULE: Only use this context for technical facts. DO NOT hallucinate "Ramda" or "Iron Hand".\n${ragContext}`;
+                }
                 const chatHistory = [
                   { role: "system", content: systemPrompt }, 
                   ...nextMessages.slice(0, -1).map(m => ({ role: m.role, content: m.content })), 
