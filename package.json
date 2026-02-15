@@ -2,9 +2,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:debug": "NODE_OPTIONS='--inspect' next dev",
+    "dev:debug-brk": "NODE_OPTIONS='--inspect-brk' next dev",
     "build": "next build",
     "start": "next start",
-    "mcp": "node mcp/local-runner.mjs"
+    "start:debug": "NODE_OPTIONS='--inspect' next start",
+    "mcp": "node mcp/local-runner.mjs",
+    "mcp:debug": "node --inspect=9230 mcp/local-runner.mjs",
+    "mcp:debug-brk": "node --inspect-brk=9230 mcp/local-runner.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.73.0",

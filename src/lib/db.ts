@@ -151,6 +151,27 @@ export async function initDb() {
           );
         `);
 
+        // Visitor Dimension Table
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS visitors (
+            visitor_id TEXT PRIMARY KEY,
+            first_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            last_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            total_visits INTEGER DEFAULT 0,
+            total_page_views INTEGER DEFAULT 0,
+            user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+            first_referrer TEXT,
+            first_user_agent TEXT,
+            country TEXT,
+            city TEXT,
+            device_type TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS visitors_user_id_idx ON visitors(user_id);
+          CREATE INDEX IF NOT EXISTS visitors_last_seen_idx ON visitors(last_seen);
+        `);
+
         // Page Analytics Table
         await client.query(`
           CREATE TABLE IF NOT EXISTS page_analytics (
@@ -165,6 +186,7 @@ export async function initDb() {
           );
           CREATE INDEX IF NOT EXISTS page_analytics_path_idx ON page_analytics(path);
           CREATE INDEX IF NOT EXISTS page_analytics_created_at_idx ON page_analytics(created_at);
+          CREATE INDEX IF NOT EXISTS page_analytics_visitor_id_idx ON page_analytics(visitor_id);
         `);
 
         // Daily Analytics Summary (for storage optimization)
@@ -193,6 +215,19 @@ export async function initDb() {
           );
           CREATE INDEX IF NOT EXISTS post_chunks_slug_idx ON post_chunks(slug);
           CREATE INDEX IF NOT EXISTS post_chunks_fts_idx ON post_chunks USING GIN(fts);
+        `);
+
+        // LinkedIn Shares Table
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS linkedin_shares (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            slug TEXT NOT NULL UNIQUE,
+            linkedin_post_id TEXT,
+            shared_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            shared_by TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS linkedin_shares_slug_idx ON linkedin_shares(slug);
         `);
 
         await client.query('COMMIT');

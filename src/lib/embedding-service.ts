@@ -88,9 +88,9 @@ export class EmbeddingService {
       );
 
       // Skip if hash matches
-      // if (existing.rows.length > 0 && existing.rows[0].content_hash === contentHash) {
-      //   return { success: true, message: `Skipped ${slug} (no changes)` };
-      // }
+      if (existing.rows.length > 0 && existing.rows[0].content_hash === contentHash) {
+        return { success: true, message: `Skipped ${slug} (no changes)` };
+      }
 
       console.log(`🧠 [EmbeddingService] Generating global embedding for ${slug}...`);
       const globalResult = await embeddingModel.embedContent({
@@ -146,6 +146,7 @@ export class EmbeddingService {
     let processed = 0;
     let updated = 0;
     let errors = 0;
+    const errorDetails: string[] = [];
 
     console.log(`🚀 [EmbeddingService] Starting hybrid sync for ${posts.length} posts...`);
 
@@ -156,8 +157,14 @@ export class EmbeddingService {
         if (!res.message.includes("Skipped")) updated++;
       } else {
         errors++;
+        errorDetails.push(`${post.slug}: ${res.message}`);
       }
       await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Throw exception if there were any errors
+    if (errors > 0) {
+      throw new Error(`Failed to sync ${errors} post(s): ${errorDetails.join(", ")}`);
     }
 
     return { processed, updated, errors };

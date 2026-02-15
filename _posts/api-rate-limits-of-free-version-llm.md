@@ -1,5 +1,5 @@
 ---
-title: "[DRAFT] Navigating the Invisible Walls: Engineering Around Free Tier LLM Rate Limits"
+title: "Navigating the Invisible Walls: Engineering Around Free Tier LLM Rate Limits"
 date: "2026-02-06"
 excerpt: "Learn how to architect robust systems that survive the restrictive throttles of free LLM APIs through distributed state management and advanced queuing strategies. This guide moves from basic HTTP 429 handling to complex token bucket implementations for production-grade resilience."
 coverImage: "/assets/blog/api-rate-limits-of-free-version-llm/cover.png"
