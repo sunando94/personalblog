@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { registerImageUpload } from "@/lib/linkedin-api";
+import { db } from "@/lib/db";
 
 export async function POST(request: Request) {
     try {
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
 
-        const { url, title, commentary, excerpt, image } = await request.json();
+        const { url, title, commentary, excerpt, image, slug } = await request.json();
 
         if (!url || !title) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -128,6 +129,27 @@ export async function POST(request: Request) {
         }
 
         const shareData = await shareResponse.json();
+        
+        // 4. Track the share in database
+        if (slug) {
+            try {
+                await db.query(`
+                    INSERT INTO linkedin_shares (slug, linkedin_post_id, shared_by)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (slug) 
+                    DO UPDATE SET 
+                        linkedin_post_id = EXCLUDED.linkedin_post_id,
+                        shared_at = CURRENT_TIMESTAMP,
+                        shared_by = EXCLUDED.shared_by
+                `, [slug, shareData.id, profileData.name || userId]);
+                
+                console.log(`✅ [LinkedIn Share] Tracked share for slug: ${slug}`);
+            } catch (dbError) {
+                console.error("Failed to track LinkedIn share in database:", dbError);
+                // Don't fail the request if tracking fails
+            }
+        }
+        
         return NextResponse.json({ success: true, id: shareData.id });
 
     } catch (error) {

@@ -11,10 +11,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Total Stats
+    // Total Stats (optimized using visitors table where possible)
     const totalViewsRes = await db.query(`SELECT COUNT(*) as count FROM page_analytics`);
-    const uniqueVisitorsRes = await db.query(`SELECT COUNT(DISTINCT visitor_id) as count FROM page_analytics`);
+    const uniqueVisitorsRes = await db.query(`SELECT COUNT(*) as count FROM visitors`);
     const avgDwellRes = await db.query(`SELECT AVG(dwell_time_seconds) as avg_dwell FROM page_analytics WHERE dwell_time_seconds > 0`);
+
+    // Visitor Insights
+    const newVisitorsRes = await db.query(`
+      SELECT COUNT(*) as count 
+      FROM visitors 
+      WHERE first_seen > NOW() - INTERVAL '7 days'
+    `);
+
+    const returningVisitorsRes = await db.query(`
+      SELECT COUNT(*) as count 
+      FROM visitors 
+      WHERE total_visits > 1 AND last_seen > NOW() - INTERVAL '7 days'
+    `);
+
+    // Device Breakdown
+    const deviceBreakdownRes = await db.query(`
+      SELECT device_type, COUNT(*) as count
+      FROM visitors
+      GROUP BY device_type
+      ORDER BY count DESC
+    `);
+
+    // Top Referrers
+    const topReferrersRes = await db.query(`
+      SELECT first_referrer, COUNT(*) as count
+      FROM visitors
+      WHERE first_referrer IS NOT NULL AND first_referrer != ''
+      GROUP BY first_referrer
+      ORDER BY count DESC
+      LIMIT 10
+    `);
 
     // Top Pages
     const topPagesRes = await db.query(`
@@ -26,7 +57,6 @@ export async function GET(request: NextRequest) {
     `);
 
     // Recent Activity (last 24h volume)
-    // We can just return the raw data for charting or pre-aggregated
     const recentActivityRes = await db.query(`
       SELECT date_trunc('hour', created_at) as hour, COUNT(*) as views 
       FROM page_analytics 
@@ -39,6 +69,10 @@ export async function GET(request: NextRequest) {
       totalViews: parseInt(totalViewsRes.rows[0].count),
       uniqueVisitors: parseInt(uniqueVisitorsRes.rows[0].count),
       avgDwellTime: Math.round(parseFloat(avgDwellRes.rows[0].avg_dwell || '0')),
+      newVisitors: parseInt(newVisitorsRes.rows[0].count),
+      returningVisitors: parseInt(returningVisitorsRes.rows[0].count),
+      deviceBreakdown: deviceBreakdownRes.rows,
+      topReferrers: topReferrersRes.rows,
       topPages: topPagesRes.rows,
       recentActivity: recentActivityRes.rows
     });

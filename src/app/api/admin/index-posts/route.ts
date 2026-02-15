@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
   try {
     const result = await EmbeddingService.syncAllPosts();
     return NextResponse.json({ 
-      success: true, 
-      message: "Post indexing completed successfully.",
+      success: true,
+      message: "Post indexing completed.",
       ...result
     });
   } catch (err: any) {
@@ -52,7 +52,11 @@ export async function POST(req: NextRequest) {
     }
     
     const result = await EmbeddingService.syncAllPosts();
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ 
+      success: true,
+      message: "Post indexing completed.",
+      ...result 
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
