@@ -31,9 +31,8 @@ export default function PostsTabContent() {
   // Modal state
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [shareFormat, setShareFormat] = useState<"post" | "article">("post");
   const [commentary, setCommentary] = useState("");
-  const [articleTeaser, setArticleTeaser] = useState("");
+  const [addLinkAsComment, setAddLinkAsComment] = useState(true);
 
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -102,92 +101,58 @@ export default function PostsTabContent() {
 
   const openShareModal = (post: Post) => {
     setSelectedPost(post);
-    setShareFormat("post");
+    setAddLinkAsComment(true);
     
-    // Standard post commentary
-    setCommentary(`🚀 New blog post alert!\n\n${post.title}\n\n${post.excerpt}`);
-    
-    // Enhanced article teaser with engaging content
-    const excerptPreview = post.excerpt.length > 200 
-      ? post.excerpt.substring(0, 200) + "..." 
-      : post.excerpt;
-    
-    // Default template (will be replaced by AI if available)
-    setArticleTeaser(
-      `💡 Just published: ${post.title}\n\n` +
-      `${excerptPreview}\n\n` +
-      `🔍 In this article, I dive deep into:\n` +
-      `• Real-world implementation strategies\n` +
-      `• Best practices and common pitfalls\n` +
-      `• Actionable takeaways you can use today\n\n` +
-      `💬 What's your experience with this? Drop your thoughts in the comments!\n\n` +
-      `👇 Full article linked in the first comment`
-    );
+    // Default hook text
+    setCommentary(`🚀 Just published: ${post.title}\n\n${post.excerpt}\n\n👇 Full article linked below`);
     
     setShowShareModal(true);
   };
 
-  // Generate AI-powered teaser when format changes to "article"
-  const handleFormatChange = async (format: "post" | "article") => {
-    setShareFormat(format);
+  // AI generation for the post
+  const generateAIPost = async () => {
+    if (!selectedPost) return;
     
-    if (format === "article" && selectedPost) {
-      // Generate AI teaser using WebLLM
-      setGeneratingTeaser(true);
-      let engine: webllm.MLCEngineInterface | null = null;
+    setGeneratingTeaser(true);
+    let engine: webllm.MLCEngineInterface | null = null;
+    
+    try {
+      const preferredModel = localStorage.getItem("preferred_model") || "Phi-3.5-mini-instruct-q4f16_1-MLC";
       
-      try {
-        // Get user's preferred model from settings
-        const preferredModel = localStorage.getItem("preferred_model") || "Phi-3.5-mini-instruct-q4f16_1-MLC";
-        
-        console.log("🤖 Loading WebLLM model:", preferredModel);
-        
-        // Create WebLLM engine with user's preferred model
-        engine = await webllm.CreateMLCEngine(preferredModel, {
-          initProgressCallback: (progress) => {
-            console.log("WebLLM loading:", progress);
-          },
-        });
+      engine = await webllm.CreateMLCEngine(preferredModel);
 
-        const prompt = `You are a LinkedIn content expert. Create an engaging LinkedIn post teaser for this technical blog article.
+      const prompt = `You are a LinkedIn content expert. Create a high-engagement LinkedIn post teaser for this blog article.
 
 Title: ${selectedPost.title}
 Excerpt: ${selectedPost.excerpt}
 
 Requirements:
-- Start with an attention-grabbing hook (use emojis sparingly)
-- Include 2-3 sentences summarizing the key value
-- Add 3 bullet points with specific takeaways
-- Include a call-to-action question
+- Start with a powerful hook that stops the scroll
+- Use 1-2 sentences to explain WHY this matters to the reader
+- Add exactly 3 bullet points showing specific value or takeaways
+- Include an engaging question to drive comments
 - End with "👇 Full article linked in the first comment"
-- Keep it under 300 words, conversational tone
+- Professional but conversational tone
+- Use 2-3 relevant hashtags at the very end
 
 Generate ONLY the LinkedIn post text:`;
 
-        const response = await engine.chat.completions.create({
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.7,
-          max_tokens: 500,
-        });
+      const response = await engine.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 600,
+      });
 
-        const teaser = response.choices[0]?.message?.content || "";
-        if (teaser) {
-          setArticleTeaser(teaser);
-        }
-      } catch (err) {
-        console.error("Failed to generate AI teaser:", err);
-        // Keep the default template
-      } finally {
-        // Clean up engine
-        if (engine) {
-          try {
-            await engine.unload();
-          } catch (e) {
-            console.error("Failed to unload engine:", e);
-          }
-        }
-        setGeneratingTeaser(false);
+      const generated = response.choices[0]?.message?.content || "";
+      if (generated) {
+        setCommentary(generated);
       }
+    } catch (err) {
+      console.error("Failed to generate AI post:", err);
+      setToast({ message: "AI generation failed. Please try again.", type: "error" });
+    } finally {
+      if (engine) await engine.unload();
+      setGeneratingTeaser(false);
     }
   };
 
@@ -213,9 +178,8 @@ Generate ONLY the LinkedIn post text:`;
           excerpt: selectedPost.excerpt,
           image: imageUrl,
           slug: selectedPost.slug,
-          commentary: shareFormat === "post" ? commentary : articleTeaser,
-          format: shareFormat,
-          addLinkAsComment: shareFormat === "article"
+          commentary: commentary,
+          addLinkAsComment: addLinkAsComment
         }),
       });
 
@@ -231,7 +195,7 @@ Generate ONLY the LinkedIn post text:`;
       
       setShowShareModal(false);
       setToast({ 
-        message: `Successfully shared to LinkedIn as ${shareFormat === "post" ? "Post" : "Article Teaser"}!`, 
+        message: `Successfully shared to LinkedIn${addLinkAsComment ? " with link in comment" : ""}!`, 
         type: "success" 
       });
     } catch (err: any) {
@@ -446,64 +410,55 @@ Generate ONLY the LinkedIn post text:`;
                 </p>
               </div>
 
-              {/* Format Selection */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Share Format
+              {/* Options */}
+              <div className="mb-6 flex items-center">
+                <input
+                  type="checkbox"
+                  id="addLinkAsComment"
+                  checked={addLinkAsComment}
+                  onChange={(e) => setAddLinkAsComment(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+                />
+                <label htmlFor="addLinkAsComment" className="ml-2 block text-sm text-slate-700 dark:text-slate-300">
+                  Add blog link as the first comment (best for organic reach)
                 </label>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => handleFormatChange("post")}
-                    className={`flex-1 px-4 py-3 rounded-lg border-2 transition-colors ${
-                      shareFormat === "post"
-                        ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                        : "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-slate-400"
-                    }`}
-                  >
-                    <div className="font-semibold">Post</div>
-                    <div className="text-xs mt-1">Share as a regular LinkedIn post with link preview</div>
-                  </button>
-                  <button
-                    onClick={() => handleFormatChange("article")}
-                    className={`flex-1 px-4 py-3 rounded-lg border-2 transition-colors ${
-                      shareFormat === "article"
-                        ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                        : "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-slate-400"
-                    }`}
-                  >
-                    <div className="font-semibold">Article Teaser ✨</div>
-                    <div className="text-xs mt-1">AI-generated teaser with blog link in comments</div>
-                  </button>
-                </div>
               </div>
 
-              {/* Commentary/Teaser Editor */}
+              {/* Commentary Editor */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  {shareFormat === "post" ? "Post Commentary" : "Article Teaser"}
-                  {generatingTeaser && (
-                    <span className="ml-2 text-blue-600 dark:text-blue-400 text-xs">
-                      <span className="inline-block animate-spin mr-1">⚡</span>
-                      Generating AI teaser...
-                    </span>
-                  )}
-                </label>
+                <div className="flex justify-between items-end mb-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Post Commentary
+                  </label>
+                  <button
+                    onClick={generateAIPost}
+                    disabled={generatingTeaser}
+                    className="text-xs flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
+                  >
+                    {generatingTeaser ? (
+                      <>
+                        <div className="animate-spin h-3 w-3 border-b-2 border-indigo-600 rounded-full"></div>
+                        Generating...
+                      </>
+                    ) : (
+                      <>✨ Generate with AI</>
+                    )}
+                  </button>
+                </div>
                 <textarea
-                  value={shareFormat === "post" ? commentary : articleTeaser}
-                  onChange={(e) => shareFormat === "post" ? setCommentary(e.target.value) : setArticleTeaser(e.target.value)}
+                  value={commentary}
+                  onChange={(e) => setCommentary(e.target.value)}
                   rows={8}
                   disabled={generatingTeaser}
-                  className={`w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white ${
+                  className={`w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-[1.5rem] focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white ${
                     generatingTeaser ? "opacity-50 cursor-wait" : ""
                   }`}
-                  placeholder={generatingTeaser ? "Generating AI teaser..." : shareFormat === "post" ? "Write your post commentary..." : "Write your article teaser..."}
+                  placeholder="Write your post commentary or use AI..."
                 />
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                  {shareFormat === "post" 
-                    ? "This will appear as your post text with a link preview card below."
-                    : generatingTeaser 
-                      ? "AI is crafting an engaging teaser for your article..."
-                      : "This will appear as your post text. The blog link will be added as the first comment automatically."
+                <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mt-2">
+                  {addLinkAsComment 
+                    ? "The blog link will be added as the first comment automatically."
+                    : "The post will include a standard LinkedIn link preview card."
                   }
                 </p>
               </div>
@@ -512,17 +467,17 @@ Generate ONLY the LinkedIn post text:`;
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowShareModal(false)}
-                  className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded-full text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleShareToLinkedIn}
                   disabled={!!sharingPost}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  className={`px-8 py-2 rounded-full font-black text-sm uppercase tracking-widest transition-all ${
                     sharingPost
                       ? "bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                      : "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
+                      : "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 shadow-xl shadow-blue-500/20"
                   }`}
                 >
                   {sharingPost ? (
@@ -531,7 +486,7 @@ Generate ONLY the LinkedIn post text:`;
                       Sharing...
                     </span>
                   ) : (
-                    `Share as ${shareFormat === "post" ? "Post" : "Article Teaser"}`
+                    "Post to LinkedIn"
                   )}
                 </button>
               </div>

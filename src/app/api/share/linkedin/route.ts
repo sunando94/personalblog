@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { registerImageUpload } from "@/lib/linkedin-api";
 import { db } from "@/lib/db";
-import { log } from "console";
-import { url } from "inspector";
-import { title } from "process";
-import image from "next/image";
+
 
 // Types
 interface ShareRequest {
@@ -15,7 +12,6 @@ interface ShareRequest {
     excerpt?: string;
     image?: string;
     slug?: string;
-    format?: "post" | "article";
     addLinkAsComment?: boolean;
 }
 
@@ -69,7 +65,6 @@ async function uploadImage(token: string, authorUrn: string, imageUrl: string): 
 function buildPostBody(
     authorUrn: string,
     commentary: string,
-    format: "post" | "article",
     addLinkAsComment: boolean,
     url: string,
     title: string,
@@ -77,25 +72,14 @@ function buildPostBody(
     assetUrn: string | null
 ) {
     // Format commentary
-    let richCommentary: string;
-    let includeMediaLink = true;
-
-    if (format === "article" && addLinkAsComment) {
-        richCommentary = commentary || `${title}\n\n${excerpt || ""}`;
-        includeMediaLink = false;
-    } else {
-        richCommentary = commentary
-            ? `${commentary}\n\nRead more: ${url}`
-            : `${title}\n\nRead more: ${url}`;
-    }
+    let richCommentary = commentary || `${title}\n\n${excerpt || ""}`;
+    let includeMediaLink = !addLinkAsComment;
 
     // Determine media category and element
     let mediaCategory: string;
     let mediaElement: any = null;
 
-    if (format === "article" && addLinkAsComment) {
-        mediaCategory = "NONE";
-    } else if (assetUrn) {
+    if (assetUrn) {
         mediaCategory = "IMAGE";
         mediaElement = {
             status: "READY",
@@ -167,21 +151,57 @@ async function createLinkedInPost(token: string, postBody: any): Promise<string>
 }
 
 // Helper: Add comment to post (LinkedIn API limitation workaround)
-async function addCommentToPost(token: string, authorUrn: string, postId: string, url: string): Promise<{ success: boolean; postUrl?: string }> {
-    // LinkedIn's public API no longer supports adding comments to posts
-    // We'll return the post URL so users can manually add the comment
-    
-    // Extract the share ID from the URN (e.g., urn:li:share:7428689671011962880 -> 7428689671011962880)
-    const shareId = postId.replace('urn:li:share:', '');
+async function addCommentToPost(token: string, authorUrn: string, postId: string, url: string): Promise<{ success: boolean; postUrl?: string; error?: string }> {
+    // Post ID should be the URN (e.g., urn:li:share:7428689671011962880)
     const linkedInPostUrl = `https://www.linkedin.com/feed/update/${postId}`;
     
-    console.log("⚠️ [LinkedIn] Comment API not available. Post URL:", linkedInPostUrl);
-    console.log("💡 [LinkedIn] Please manually add this comment:", `📖 Read the full article here: ${url}`);
-    
-    return { 
-        success: false, 
-        postUrl: linkedInPostUrl 
-    };
+    try {
+        const commentBody = {
+            actor: authorUrn,
+            object: postId,
+            message: {
+                text: `📖 Read the full article here: ${url}`
+            }
+        };
+
+        const response = await fetch(`https://api.linkedin.com/v2/socialActions/${encodeURIComponent(postId)}/comments`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                "X-Restli-Protocol-Version": "2.0.0",
+            },
+            body: JSON.stringify(commentBody),
+        });
+
+        if (response.ok) {
+            console.log("✅ [LinkedIn] Comment added successfully to:", linkedInPostUrl);
+            return { 
+                success: true, 
+                postUrl: linkedInPostUrl 
+            };
+        } else {
+            const errorText = await response.text();
+            console.error("❌ [LinkedIn] Failed to add comment:", errorText);
+            
+            // Check for common permission errors
+            if (errorText.includes("Empty permission set") || errorText.includes("ACCESS_DENIED")) {
+                console.warn("💡 [LinkedIn] Tip: Your token might be missing permissions to comment on posts.");
+            }
+            
+            return { 
+                success: false, 
+                postUrl: linkedInPostUrl,
+                error: errorText
+            };
+        }
+    } catch (err) {
+        console.error("❌ [LinkedIn] Error in addCommentToPost:", err);
+        return { 
+            success: false, 
+            postUrl: linkedInPostUrl 
+        };
+    }
 }
 
 // Helper: Track share in database
@@ -215,7 +235,7 @@ export async function POST(request: Request) {
 
         const data: ShareRequest = await request.json();
         console.log("ShareRequest",data)
-        const { url, title, commentary, excerpt = "", image, slug, format = "post", addLinkAsComment = false } = data;
+        const { url, title, commentary, excerpt = "", image, slug, addLinkAsComment = false } = data;
 
         if (!url || !title) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -228,15 +248,15 @@ export async function POST(request: Request) {
         const assetUrn = image ? await uploadImage(token, authorUrn, image) : null;
 
         // 3. Build post body
-        const postBody = buildPostBody(authorUrn, commentary, format, addLinkAsComment, url, title, excerpt, assetUrn);
+        const postBody = buildPostBody(authorUrn, commentary, addLinkAsComment, url, title, excerpt, assetUrn);
 
         // 4. Create LinkedIn post
         const postId = await createLinkedInPost(token, postBody);
 
-        // 5. Add comment (if article format)
-        let commentAdded = false;
-        if (addLinkAsComment && format === "article") {
-            commentAdded = await addCommentToPost(token, authorUrn, postId, url);
+        // 5. Add comment (if requested)
+        let commentStatus = null;
+        if (addLinkAsComment) {
+            commentStatus = await addCommentToPost(token, authorUrn, postId, url);
         }
 
         // 6. Track in database
@@ -247,8 +267,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ 
             success: true, 
             id: postId, 
-            format, 
-            commentAdded 
+            commentAdded: commentStatus?.success || false,
+            commentDetails: commentStatus
         });
 
     } catch (error) {
