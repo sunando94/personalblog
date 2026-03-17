@@ -6,8 +6,24 @@ import { getAuthorWithDefaults } from "./author";
 
 const postsDirectory = join(process.cwd(), "_posts");
 
+function getFilesRecursively(dir: string): string[] {
+  let results: string[] = [];
+  const list = fs.readdirSync(dir, { withFileTypes: true });
+  list.forEach((file) => {
+    const filePath = join(dir, file.name);
+    if (file.isDirectory()) {
+      results = results.concat(getFilesRecursively(filePath));
+    } else if (file.isFile() && file.name.endsWith('.md')) {
+      results.push(filePath);
+    }
+  });
+  return results;
+}
+
 export function getPostSlugs() {
-  return fs.readdirSync(postsDirectory);
+  const files = getFilesRecursively(postsDirectory);
+  // Return relative paths to maintain compatibility with getPostBySlug
+  return files.map((file) => file.substring(postsDirectory.length + 1));
 }
 
 export function getPostBySlug(slug: string) {
