@@ -6,7 +6,7 @@ coverImage: "/assets/blog/optimizing-spark.png"
 category: "Data Engineering"
 author:
   name: "Sunando Bhattacharya"
-  picture: "https://media.licdn.com/dms/image/v2/C5103AQEYuvZs62QVaQ/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1517566198426?e=1772668800&v=beta&t=BKDVH_ZIcxXtBFfrfjp55TDbz0ChrFG6AIaJwyBpSGg"
+  picture: "/assets/blog/authors/sunando-bhattacharya.jpeg"
 ogImage:
   url: "/assets/blog/optimizing-spark.png"
 releaseDate: "2026-02-15"
