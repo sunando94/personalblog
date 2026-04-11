@@ -35,9 +35,15 @@ export function getPostBySlug(slug: string) {
   const post = { ...data, slug: realSlug, content } as Post;
   const today = new Date().toISOString().split("T")[0];
 
+  if ((post.date as any) instanceof Date) {
+    post.date = (post.date as any).toISOString().split("T")[0];
+  }
+
   // Default releaseDate to today if missing
   if (!post.releaseDate) {
     post.releaseDate = today;
+  } else if ((post.releaseDate as any) instanceof Date) {
+    post.releaseDate = (post.releaseDate as any).toISOString().split("T")[0];
   } else {
     // If user provides DD/MM/YYYY, normalize to YYYY-MM-DD for comparison
     const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
